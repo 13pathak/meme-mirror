@@ -5,3 +5,4 @@ playwright-report/
 .server-pid
 .test-tools/
 public/references/
+tmp/pdfs/

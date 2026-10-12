@@ -4,6 +4,8 @@ A local browser game for the school PTM on **14 October 2026**. Child and parent
 
 ## First-time setup (internet needed once)
 
+Printable PTM documents are ready in `output/pdf/`: [Setup and operator guide](output/pdf/Meme-Mirror-Setup-and-Operator-Guide.pdf) (6 A4 pages) and [Visitor poster](output/pdf/Meme-Mirror-PTM-Visitor-Poster-A3.pdf) (one A3 portrait page). Print the poster at A3 actual size, or choose A4 with Fit to printable area. Both describe the current one-second hold. The optional ReportLab authoring script is `scripts/build-ptm-docs.py`; it is not needed to run the game.
+
 Install **Node.js 22 or newer** and **Google Chrome**. In PowerShell, open this project folder and run:
 
 ```powershell
