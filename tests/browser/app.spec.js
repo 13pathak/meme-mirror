@@ -85,9 +85,15 @@ test('actual model validates one human reference, rejects two faces and blank ph
     const ctx=canvas.getContext('2d');ctx.drawImage(image,0,0);ctx.drawImage(image,image.width,0);
     const double = await createImageBitmap(canvas);
     const two = await send({ id: 3, type: 'reference', bitmap: double }, [double]);
-    worker.terminate();image.close();return { one: one.count, two: two.count, blendshapes: one.categories?.length };
+    const videoFrame = await createImageBitmap(image);
+    const videoResult = await send({ id: 4, type: 'frame', bitmap: videoFrame, time: performance.now(), returnFrame: true }, [videoFrame]);
+    const returnedFrameSize = [videoResult.bitmap?.width, videoResult.bitmap?.height];
+    const originalFrameSize = [image.width, image.height];
+    videoResult.bitmap?.close();
+    worker.terminate();image.close();return { one: one.count, two: two.count, blendshapes: one.categories?.length, returnedFrameSize, originalFrameSize };
   }, portrait.toString('base64'));
-  console.log('Actual reference counts:', counts); expect(counts).toEqual({ one: 1, two: 2, blendshapes: 52 });
+  console.log('Actual reference counts:', counts); expect(counts).toMatchObject({ one: 1, two: 2, blendshapes: 52 });
+  expect(counts.returnedFrameSize).toEqual(counts.originalFrameSize);
   await page.locator('#operator-open').click();
   await page.locator('#delegate').selectOption('CPU');
   await page.locator('#reference-file').setInputFiles({ name: 'portrait.jpg', mimeType: 'image/jpeg', buffer: portrait });

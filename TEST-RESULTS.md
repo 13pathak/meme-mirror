@@ -1,5 +1,12 @@
 # Test results — 12 October 2026
 
+## Temporary steady-face reveal update
+
+- The 13 scoring/state tests passed again after this update.
+- Five existing Chrome checks passed with the updated worker/camera pipeline, including real CPU/GPU inference, full family flow, reference validation/persistence, permission denial, and synthetic camera capture. The real model returned the original one-face inference frame at its original resolution for the reveal.
+- Three new Chrome reveal checks passed: the hold-completion frame is mirrored and frozen with the averaged match score; the reveal lasts 2.5 seconds and then unlocks the next expression; its canvas pixels clear on expiry, Reset, retry and page exit; multiple-face/tracking failure cannot produce a picture. The screenshots use an explicitly simulated camera drawing, not a participant. No picture was written to localStorage or uploaded.
+- The percentage is labelled **Expression match** on a game scale. Real people and the exhibition hardware still need the manual checks below.
+
 ## Passed
 
 - **13 Node tests:** three-expression target ordering, neutral and irrelevant-feature handling, conflict/missing-feature penalties, missing/malformed tracking rejection, symmetric left/right handling, reference activation validation, smoothing reset, six-round flow, stale tracking, unstable hold, retry and reset.

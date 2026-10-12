@@ -27,7 +27,11 @@ self.onmessage = async ({ data }) => {
       if (nextMode !== mode) { await model.setOptions({ runningMode: nextMode }); mode = nextMode; }
       result = mode === 'IMAGE' ? model.detect(bitmap) : model.detectForVideo(bitmap, data.time);
     }
-    self.postMessage({ id, count: result.faceLandmarks.length, categories: result.faceLandmarks.length === 1 ? result.faceBlendshapes[0]?.categories : null, ms: performance.now() - start, delegate });
+    const response = { id, count: result.faceLandmarks.length, categories: result.faceLandmarks.length === 1 ? result.faceBlendshapes[0]?.categories : null, ms: performance.now() - start, delegate };
+    // Return the original inferred frame only during a one-face hold. No screenshot queue.
+    if (type === 'frame' && data.returnFrame && response.count === 1) {
+      self.postMessage({ ...response, bitmap }, [bitmap]);
+    } else self.postMessage(response);
   } catch (error) { self.postMessage({ id, error: error.message || String(error) }); }
   finally { bitmap?.close(); }
 };

@@ -1,6 +1,6 @@
 # Meme Mirror — Can You Make That Face? (side cheek project)
 
-A local browser game for the school PTM on **14 October 2026**. Child and parent copy the same three faces, hold each expression, then see a cheerful score comparison. No accounts, names, cloud inference, API keys, participant photos, or video recordings.
+A local browser game for the school PTM on **14 October 2026**. Child and parent copy the same three faces, hold each expression, then see a cheerful score comparison. A temporary picture celebrates each completed hold. No accounts, names, cloud inference, API keys, saved participant photos, or video recordings.
 
 ## First-time setup (internet needed once)
 
@@ -23,8 +23,10 @@ No build step is needed. The application is plain HTML, CSS and JavaScript, serv
 2. Open **http://127.0.0.1:4173** in Chrome if it does not open automatically.
 3. Click **Enable camera** and allow access. A built-in camera is the default.
 4. Use **Fullscreen** or Chrome's **F11** key. Press F11/Escape to leave fullscreen.
-5. Click **Start playing**. The child plays three rounds; **Next** passes to each round and then the parent. The parent gets the same frozen reference set.
+5. Click **Start playing**. Each completed hold reveals your steady face beside the reference for **2.5 seconds**, with **Expression match** shown as a percentage below your picture. Then **Next face** becomes available. The child plays three rounds, followed by the parent using the same frozen references.
 6. Use **Retry round** for another take, **Next** to accept the result, and **Reset family** / **Next family** to clear session scores. Reset keeps the webcam ready for the next family.
+
+The reveal uses the exact inferred frame that completes the hold, mirrored to match the preview. The final score still averages the full hold. The picture exists only in a browser canvas: it is never encoded, downloaded, stored or uploaded. Its pixels are cleared after the reveal, on Reset, or when the page is hidden/closed. A reset button is available during the reveal. If a frame cannot be displayed, the round result and Next/Retry remain usable.
 
 The launcher checks the local assets, binds only to `127.0.0.1`, starts a hidden local server, and prefers installed Chrome. It reuses an existing Meme Mirror server from this exact folder. If Chrome is absent, it opens the default browser and reports that Chrome is the target. Another app or another project copy on port 4173 causes an actionable error.
 
@@ -70,7 +72,7 @@ Reference photos, captions, model version and extracted targets are stored in th
 
 ## What the AI does, and what the score means
 
-Google's pretrained **MediaPipe Face Landmarker** estimates facial landmarks and 52 blendshape coefficients. This app uses only selected expression movements. It does not compare identity, face proportions, raw pixels, or infer the participant's real emotions. MediaPipe has no built-in “meme similarity percentage”. **Expression match** is our unvalidated **0–100 game scale**.
+Google's pretrained **MediaPipe Face Landmarker** estimates facial landmarks and 52 blendshape coefficients. This app uses only selected expression movements. It does not compare identity, face proportions, raw pixels, or infer the participant's real emotions. MediaPipe has no built-in “meme similarity percentage”. **Expression match** is our unvalidated **0–100 game scale**; the reveal formats it as a percentage for the game, not scientific accuracy. **100% held** means the hold duration is complete and is separate from the expression-match score.
 
 Related left/right coefficients are averaged into features in `public/scoring.js`:
 
@@ -101,7 +103,7 @@ Features are exponentially smoothed using a **180 ms** time constant. Each round
 
 No-face, multi-face, malformed measurements, hidden tabs, and results older than **500 ms** clear the live score and hold buffer. Tracking loss pauses the attempt and eventually requests Retry after 15 seconds. Background tabs and the operator dialog pause round timers. Inference accepts up to two faces for rejection purposes, but scores only one; application smoothing replaces MediaPipe's one-face-only built-in smoothing.
 
-Each player totals three scores, **out of 300**. Active time is about 71 seconds for six successful rounds, plus instructions, results and handover: roughly **90–120 seconds per family** is the intended pace, still requiring a timed rehearsal.
+Each player totals three scores, **out of 300**. Active time is about 71 seconds for six successful rounds, plus 15 seconds of photo reveals, instructions, results and handover: roughly **90–120 seconds per family** is the intended pace, still requiring a timed rehearsal.
 
 ### Tune after testing
 
@@ -140,6 +142,7 @@ See **TEST-RESULTS.md** for executed checks and **EXHIBITION-CHECKLIST.md** for 
 - `public/vision-worker.js`, `camera.js`: local model, fallback, single-frame scheduling and camera errors.
 - `public/scoring.js`, `game.js`: tunable scoring and independent round state machine.
 - `public/app.js`, `references.js`: visitor/operator interface and operator reference persistence.
+- `public/reveal.js`: temporary mirrored hold-completion picture and its 2.5-second lifetime.
 - `scripts/setup.mjs`, `check-assets.mjs`: local dependency/model preparation and checksums.
 - `scripts/server.mjs`, `launch.ps1`, `stop.ps1`: loopback-only serving and Windows lifecycle.
 - `tests/`: scoring/state tests, browser tests and a Google sample portrait used only in tests.

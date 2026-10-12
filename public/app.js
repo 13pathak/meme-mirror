@@ -2,9 +2,17 @@ import { EXPRESSIONS, matchScore, Smoother, validateReference } from './scoring.
 import { Game, TIMING } from './game.js';
 import { VisionCamera } from './camera.js';
 import { MODEL, readReferences, saveReferences, preparePhoto, validatePack } from './references.js';
+import { RoundReveal } from './reveal.js';
 const $ = selector => document.querySelector(selector);
 const game = new Game(), smoother = new Smoother();
-let references = readReferences(), activeReferences, tracking = 'Camera stays on this device. Nothing is recorded.', starting = false;
+const reveal = new RoundReveal($('#round-reveal'), () => {
+  if (game.phase === 'result') {
+    $('#next').disabled = false;
+    $('#retry').disabled = false;
+    $('#next').focus({ preventScroll: true });
+  }
+});
+let references = readReferences(), activeReferences, tracking = 'Your steady face flashes briefly. Nothing is saved.', starting = false;
 let recent = [], lastResult, lastRendered = '', lastExpression = '', refBusy = false;
 const expression = () => {
   const base = EXPRESSIONS[game.round];
@@ -13,9 +21,11 @@ const expression = () => {
 };
 const status = message => { tracking = message; $('#tracking-message').textContent = message; $('#operator-status').textContent = message; };
 const camera = new VisionCamera($('#camera'), result => {
-  const now = performance.now(); lastResult = result;
+  const now = performance.now();
+  const { bitmap, ...readings } = result;
+  lastResult = readings;
   recent = recent.filter(r => now - r.received < 3000);
-  if (result.ms != null) recent.push(result);
+  if (result.ms != null) recent.push(readings);
   if (result.count !== 1 || !result.sample || now - result.captured > TIMING.stale) {
     smoother.clear(); game.ingest(null, now);
     if (camera.running) status(result.count > 1 ? 'One face at a time! Everyone else, step aside.' : result.count === 1 ? 'Tracking is catching up. Stay facing the camera.' : 'Step into view and face the camera.');
@@ -23,12 +33,19 @@ const camera = new VisionCamera($('#camera'), result => {
   }
   if (document.hidden || $('#operator').open) { smoother.clear(); game.invalidate(); return; }
   const smoothed = smoother.update(result.sample, result.captured);
+  const before = game.phase;
   game.ingest(matchScore(smoothed, expression()), result.captured);
+  if (before === 'hold' && game.phase === 'result') {
+    reveal.show(bitmap, expression(), game.result);
+    render(now);
+  }
   status('One face found. You’re in the spotlight!');
 }, status);
+camera.captureFrame = () => game.phase === 'hold' && !$('#operator').open;
 
 function reset() {
   game.reset(); smoother.clear(); activeReferences = null; lastRendered = ''; lastExpression = '';
+  reveal.hide();
   document.body.classList.remove('celebrating'); render(performance.now());
 }
 function requireIdle() {
@@ -64,7 +81,9 @@ function render(now) {
   const phase = game.phase, playing = ['prep','attempt','hold'].includes(phase), result = phase === 'result';
   $('#start').hidden = phase !== 'idle'; $('#start').disabled = !camera.running || starting || refBusy;
   $('#next').hidden = !['result','switch'].includes(phase);
+  $('#next').disabled = $('#round-reveal').open;
   $('#retry').hidden = !['result','failed'].includes(phase);
+  $('#retry').disabled = $('#round-reveal').open;
   $('#next').textContent = phase === 'switch' ? 'Start parent’s turn →' : game.round === 2 ? game.player === 0 ? 'Parent’s turn →' : 'See family scores →' : 'Next face →';
   $('#camera-placeholder').hidden = camera.running;
   $('#camera-indicator').textContent = camera.running ? '● LIVE · ONLY ON THIS DEVICE' : 'CAMERA OFF';
@@ -114,9 +133,10 @@ function render(now) {
 function frame(now) { if (!document.hidden && !$('#operator').open) game.tick(now); else { game.lastTick = now; game.invalidate(); smoother.clear(); } render(now); requestAnimationFrame(frame); }
 $('#enable-camera').onclick = enableCamera;
 $('#start').onclick = () => { if (!camera.running || refBusy) return; activeReferences = structuredClone(references); smoother.clear(); game.start(performance.now()); };
-$('#next').onclick = () => { smoother.clear(); game.next(performance.now()); if (game.phase === 'complete') { render(performance.now()); $('#summary').scrollIntoView({ behavior: 'smooth', block: 'center' }); } };
-$('#retry').onclick = () => { smoother.clear(); game.retry(performance.now()); };
+$('#next').onclick = () => { if ($('#round-reveal').open) return; reveal.hide(); smoother.clear(); game.next(performance.now()); if (game.phase === 'complete') { render(performance.now()); $('#summary').scrollIntoView({ behavior: 'smooth', block: 'center' }); } };
+$('#retry').onclick = () => { if ($('#round-reveal').open) return; reveal.hide(); smoother.clear(); game.retry(performance.now()); };
 $('#reset').onclick = reset; $('#new-family').onclick = () => { reset(); window.scrollTo({ top: 0 }); };
+$('#reveal-reset').onclick = reset;
 $('#fullscreen').onclick = async () => { try { if (document.fullscreenElement) await document.exitFullscreen(); else await document.documentElement.requestFullscreen(); } catch { status('Use Chrome’s F11 key for fullscreen.'); } };
 $('#operator-open').onclick = () => { game.invalidate(); smoother.clear(); $('#operator').showModal(); };
 $('#operator-close').onclick = () => $('#operator').close();
@@ -156,6 +176,6 @@ $('#import-references').onchange = async event => {
   } catch(e) { $('#reference-status').textContent = e.message; }
   finally { event.target.value = ''; }
 };
-document.addEventListener('visibilitychange', () => { game.invalidate(); smoother.clear(); game.lastTick = performance.now(); });
-window.addEventListener('pagehide', () => camera.dispose());
+document.addEventListener('visibilitychange', () => { if (document.hidden) reveal.hide(); game.invalidate(); smoother.clear(); game.lastTick = performance.now(); });
+window.addEventListener('pagehide', () => { reveal.hide(); camera.dispose(); });
 requestAnimationFrame(frame);

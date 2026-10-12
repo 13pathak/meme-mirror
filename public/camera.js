@@ -18,7 +18,7 @@ export class VisionCamera {
     this.onStatus('Loading the local face model…');
     this.worker = new Worker('/vision-worker.js');
     this.worker.onmessage = ({ data }) => {
-      const pending = this.pending.get(data.id); if (!pending) return;
+      const pending = this.pending.get(data.id); if (!pending) { data.bitmap?.close(); return; }
       clearTimeout(pending.timer); this.pending.delete(data.id);
       data.error ? pending.reject(new Error(data.error)) : pending.resolve(data);
     };
@@ -44,11 +44,13 @@ export class VisionCamera {
       this.busy = true; this.lastVideo = this.video.currentTime;
       try {
         const bitmap = await createImageBitmap(this.video);
-        const result = await this.request('frame', { bitmap, time: started }, [bitmap]);
-        if (this.running && generation === this.generation && !this.paused && !document.hidden) {
-          this.delegate = result.delegate;
-          this.onSample({ ...result, sample: measurements(result.categories), captured: started, received: performance.now() });
-        }
+        const result = await this.request('frame', { bitmap, time: started, returnFrame: this.captureFrame?.() === true }, [bitmap]);
+        try {
+          if (this.running && generation === this.generation && !this.paused && !document.hidden) {
+            this.delegate = result.delegate;
+            this.onSample({ ...result, sample: measurements(result.categories), captured: started, received: performance.now() });
+          }
+        } finally { result.bitmap?.close(); }
       } catch (error) { if (generation === this.generation) { this.stop(); this.ready = false; this.onStatus('Face tracking stopped. Use Enable camera to retry. ' + error.message); } }
       finally { this.busy = false; }
     }
