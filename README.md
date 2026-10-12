@@ -1,4 +1,4 @@
-# Meme Mirror — Can You Make That Face?
+# Meme Mirror — Can You Make That Face? (side cheek project)
 
 A local browser game for the school PTM on **14 October 2026**. Child and parent copy the same three faces, hold each expression, then see a cheerful score comparison. No accounts, names, cloud inference, API keys, participant photos, or video recordings.
 
