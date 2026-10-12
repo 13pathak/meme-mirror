@@ -30,7 +30,7 @@ let previous;
 try { previous = JSON.parse(await readFile(path.join(root, 'assets-lock.json'), 'utf8')); } catch {}
 if (previous && previous.modelSha256 !== modelHash) throw new Error('Model checksum differs from assets-lock.json. Do not use this model.');
 await writeFile(model, bytes);
-const files = ['models/face_landmarker.task', 'vendor/vision_bundle.mjs', ...(await readdir(path.join(out, 'wasm'))).map(n => `vendor/wasm/${n}`)];
+const files = ['models/face_landmarker.task', 'vendor/vision_bundle.mjs', ...(await readdir(path.join(out, 'wasm'))).map(n => `vendor/wasm/${n}`), 'assets/memes/grin.png', 'assets/memes/surprise.png'];
 const hashes = {};
 for (const file of files) hashes[file] = sha256(await readFile(path.join(root, 'public', file)));
 await writeFile(path.join(root, 'assets-lock.json'), JSON.stringify({ package: '@mediapipe/tasks-vision@0.10.21', modelUrl, modelSha256: modelHash, hashes }, null, 2) + '\n');

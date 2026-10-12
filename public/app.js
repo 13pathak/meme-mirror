@@ -3,6 +3,7 @@ import { Game, TIMING } from './game.js';
 import { VisionCamera } from './camera.js';
 import { MODEL, readReferences, saveReferences, preparePhoto, validatePack } from './references.js';
 import { RoundReveal } from './reveal.js';
+import { effectiveReferences } from './builtin-references.js';
 const $ = selector => document.querySelector(selector);
 const game = new Game(), smoother = new Smoother();
 const reveal = new RoundReveal($('#round-reveal'), () => {
@@ -13,10 +14,13 @@ const reveal = new RoundReveal($('#round-reveal'), () => {
   }
 });
 let references = readReferences(), activeReferences, tracking = 'Your steady face flashes briefly. Nothing is saved.', starting = false;
+let defaultSet = 'checked';
+try { if (localStorage.getItem('meme-mirror-default-set-v1') === 'demo') defaultSet = 'demo'; } catch {}
+$('#reference-set').value = defaultSet;
 let recent = [], lastResult, lastRendered = '', lastExpression = '', refBusy = false;
 const expression = () => {
   const base = EXPRESSIONS[game.round];
-  const ref = (activeReferences || references)[base.id];
+  const ref = (activeReferences || effectiveReferences(references, defaultSet))[base.id];
   return ref ? { ...base, ...ref } : base;
 };
 const status = message => { tracking = message; $('#tracking-message').textContent = message; $('#operator-status').textContent = message; };
@@ -132,7 +136,7 @@ function render(now) {
 }
 function frame(now) { if (!document.hidden && !$('#operator').open) game.tick(now); else { game.lastTick = now; game.invalidate(); smoother.clear(); } render(now); requestAnimationFrame(frame); }
 $('#enable-camera').onclick = enableCamera;
-$('#start').onclick = () => { if (!camera.running || refBusy) return; activeReferences = structuredClone(references); smoother.clear(); game.start(performance.now()); };
+$('#start').onclick = () => { if (!camera.running || refBusy) return; activeReferences = structuredClone(effectiveReferences(references, defaultSet)); smoother.clear(); game.start(performance.now()); };
 $('#next').onclick = () => { if ($('#round-reveal').open) return; reveal.hide(); smoother.clear(); game.next(performance.now()); if (game.phase === 'complete') { render(performance.now()); $('#summary').scrollIntoView({ behavior: 'smooth', block: 'center' }); } };
 $('#retry').onclick = () => { if ($('#round-reveal').open) return; reveal.hide(); smoother.clear(); game.retry(performance.now()); };
 $('#reset').onclick = reset; $('#new-family').onclick = () => { reset(); window.scrollTo({ top: 0 }); };
@@ -144,6 +148,23 @@ $('#operator').addEventListener('close', () => { camera.paused = false; game.las
 $('#reconnect').onclick = enableCamera;
 $('#stop-camera').onclick = () => { reset(); camera.dispose(); status('Camera is off. Enable it when you’re ready.'); };
 $('#reference-slot').onchange = () => { const ref = EXPRESSIONS[Number($('#reference-slot').value)]; $('#reference-caption-input').value = references[ref.id]?.caption || ref.caption; $('#reference-status').textContent = ''; };
+$('#reference-set').onchange = () => {
+  try {
+    requireIdle();
+    if (refBusy) throw new Error('Wait for photo analysis to finish.');
+    defaultSet = $('#reference-set').value; lastExpression = '';
+    try { localStorage.setItem('meme-mirror-default-set-v1', defaultSet); } catch {}
+    $('#reference-status').textContent = defaultSet === 'checked' ? 'Checked human photos selected. Pout keeps its demo; your saved slot overrides still apply.' : 'Original illustrated defaults selected. Your saved slot overrides still apply.';
+  } catch (e) { $('#reference-set').value = defaultSet; $('#reference-status').textContent = e.message; }
+};
+$('#restore-defaults').onclick = () => {
+  try {
+    requireIdle();
+    if (refBusy) throw new Error('Wait for photo analysis to finish.');
+    saveReferences({}); references = {}; lastExpression = '';
+    $('#reference-status').textContent = 'All three slots now use the selected defaults.';
+  } catch (e) { $('#reference-status').textContent = e.message; }
+};
 $('#save-reference').onclick = async () => {
   if (refBusy || starting) return;
   refBusy = true; $('#save-reference').disabled = true;
@@ -162,7 +183,7 @@ $('#save-reference').onclick = async () => {
   finally { refBusy = false; camera.paused = false; $('#save-reference').disabled = false; }
 };
 $('#restore-demo').onclick = () => {
-  try { requireIdle(); if (refBusy) throw new Error('Wait for photo analysis to finish.'); const next = { ...references }; delete next[EXPRESSIONS[Number($('#reference-slot').value)].id]; saveReferences(next); references = next; lastExpression = ''; $('#reference-status').textContent = 'Illustrated demo and preset target restored.'; } catch (e) { $('#reference-status').textContent = e.message; }
+  try { requireIdle(); if (refBusy) throw new Error('Wait for photo analysis to finish.'); const next = { ...references, [EXPRESSIONS[Number($('#reference-slot').value)].id]: { demo: true } }; saveReferences(next); references = next; lastExpression = ''; $('#reference-status').textContent = 'Illustrated demo and preset target restored for this slot.'; } catch (e) { $('#reference-status').textContent = e.message; }
 };
 $('#export-references').onclick = () => {
   const blob = new Blob([JSON.stringify(references, null, 2)], { type: 'application/json' });

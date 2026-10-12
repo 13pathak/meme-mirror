@@ -9,6 +9,7 @@ export function validatePack(pack) {
   const clean = {};
   for (const [key, ref] of Object.entries(pack)) {
     const expression = EXPRESSIONS.find(e => e.id === key);
+    if (expression && ref?.demo === true) { clean[key] = { demo: true }; continue; }
     if (!expression || ref.model !== MODEL || typeof ref.caption !== 'string' || ref.caption.length > 100 || !/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(ref.image) || ref.image.length > 2200000) throw new Error('Invalid or incompatible reference pack. Import photos again with this model.');
     if (Object.keys(FEATURES).some(k => !Number.isFinite(ref.target?.[k]) || ref.target[k] < 0 || ref.target[k] > 1) || validateReference(ref.target, expression)) throw new Error('Invalid expression target in reference pack.');
     clean[key] = { model: MODEL, caption: ref.caption, image: ref.image, target: Object.fromEntries(Object.keys(FEATURES).map(k => [k, ref.target[k]])) };

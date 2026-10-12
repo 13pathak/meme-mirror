@@ -24,6 +24,9 @@ test.beforeEach(async ({ page, context }) => {
   await page.clock.install({ time: frozenTime });
   await page.goto('/');
   await page.clock.pauseAt(new Date(frozenTime.getTime() + 1000));
+  await page.locator('#operator-open').click();
+  await page.locator('#reference-set').selectOption('demo');
+  await page.locator('#operator-close').click();
   await page.locator('#enable-camera').click();await page.locator('#start').click();
 });
 const pixels = page => page.locator('#reveal-photo').evaluate(canvas => ({width:canvas.width,height:canvas.height,left:[...canvas.getContext('2d').getImageData(0,0,1,1).data],right:[...canvas.getContext('2d').getImageData(canvas.width-1,0,1,1).data]}));
@@ -51,7 +54,7 @@ test('completed hold reveals mirrored frame and final score for 2.5 seconds, the
   await expect(page.locator('#next')).toBeEnabled();await page.locator('#next').click();await page.clock.runFor(100);
   await expect(page.locator('#caption')).toHaveText('“The test has a second page.”');
   await expect(page.locator('#countdown')).toBeVisible();
-  expect(await page.evaluate(()=>Object.keys(localStorage))).toEqual([]);
+  expect(await page.evaluate(()=>Object.keys(localStorage))).toEqual(['meme-mirror-default-set-v1']);
 });
 
 test('reset clears the picture immediately and failed tracking cannot reveal a face', async ({ page }) => {

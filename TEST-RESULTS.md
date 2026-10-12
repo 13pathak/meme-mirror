@@ -1,5 +1,13 @@
 # Test results — 12 October 2026
 
+## Selected human-reference update
+
+- **16 Node tests and the complete 13-test Chrome suite passed** with the selected human references and the original demos available.
+- All four user-supplied photos produced exactly one face in both CPU and GPU modes. Photos 3 (grin) and 4 (surprise) were selected; none was suitable for pout. See `REFERENCE-CHECKS.md` for the measurements and selection reasons.
+- The selected references were checked in original-image and 640 × 480 video form in both execution modes. Matching video frames scored **98.9/92.3 on CPU** and **90.8/95.7 on GPU** (grin/surprise); neutral vectors scored **0** and the opposite selected expression scored **16.4/26.6**.
+- A native synthetic camera stream fed both reference photos through the actual CPU model, full round timing, stable hold and screenshot reveal: final round scores were **99 and 92**. These are repeated reference-image inputs, not real visitor imitation or a hardware performance benchmark.
+- The original illustrated set, saved slot overrides, per-slot demo restoration, bulk default restoration and profile preference persistence passed. All **eight** model/runtime/reference files passed checksum verification. The new checks blocked external browser requests.
+
 ## Temporary steady-face reveal update
 
 - The 13 scoring/state tests passed again after this update.
@@ -24,6 +32,6 @@
 - **No physical network disconnection was performed.** External requests were blocked for the fresh-context tests, but a fresh startup with the laptop's Wi-Fi/Ethernet physically disconnected is still required.
 - **No 30-minute endurance run**, connected-TV/projector test, USB-camera switch test, or human fairness/comfort evaluation was completed. Typical family duration remains an estimate.
 - Hardware camera-busy/disconnected conditions and physical fullscreen/display behaviour still need rehearsal. Clear recovery paths are implemented.
-- Illustrated defaults have explicit presets; they are not photographs analysed by AI. Human references can be added through the operator desk. Pout especially needs human tuning.
+- The two selected human defaults have measured targets. Original illustrations remain explicit presets; pout still uses one because no supplied photo showed meaningful pucker movement. All references need live human tuning.
 
 Complete `EXHIBITION-CHECKLIST.md` before the event. The game is implemented and automated checks pass; these remaining items are hands-on exhibition acceptance checks.

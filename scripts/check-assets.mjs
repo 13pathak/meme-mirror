@@ -10,5 +10,5 @@ export async function checkAssets() {
   return Object.keys(lock.hashes).length;
 }
 if (process.argv[1]?.endsWith('check-assets.mjs')) {
-  console.log(`Verified ${await checkAssets()} local model/runtime files.`);
+  console.log(`Verified ${await checkAssets()} local model/runtime/reference files.`);
 }

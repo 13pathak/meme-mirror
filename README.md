@@ -38,7 +38,7 @@ npm.cmd start
 
 Leave that terminal open and press **Ctrl+C** to stop it. A launcher reusing a manually started server leaves it under that terminal's control.
 
-**Launch recovery:** inspect `server-error.log` and `server.log`. If port 4173 is busy, stop the other app or the prior Meme Mirror terminal; do not kill an unknown process. For missing assets, rerun setup while online. For a model checksum error, delete only `public/models/face_landmarker.task`, then rerun setup to download the pinned model. For a missing Node command, install Node and reopen the terminal. Do not use `file://` to open `index.html`.
+**Launch recovery:** inspect `server-error.log` and `server.log`. If port 4173 is busy, stop the other app or the prior Meme Mirror terminal; do not kill an unknown process. For missing model/runtime assets, rerun setup while online. Missing or damaged bundled PNG references must be restored from the project/repository backup. For a model checksum error, delete only `public/models/face_landmarker.task`, then rerun setup to download the pinned model. For a missing Node command, install Node and reopen the terminal. Do not use `file://` to open `index.html`.
 
 ## Quick camera feasibility check
 
@@ -58,17 +58,19 @@ Open the **gear** at the top right. This pauses the round while keeping diagnost
 
 ## Add your human references
 
-The three supplied SVG illustrations are **labelled demos with explicit preset targets**. They have **not** been analysed by MediaPipe. They provide a playable starting point while you obtain school-appropriate human reference photos.
+The default set now uses two **supplied human photos analysed by the real local model**: photo 3 for a raised-brow grin and photo 4 for surprise. Their measured targets, weights and cues are in `public/builtin-references.js`; the local PNG files are bundled and checksum-checked. Pout keeps its illustrated demo because none of the supplied photos shows measurable lip puckering. See **REFERENCE-CHECKS.md** for the four-photo comparison and executed checks.
+
+The three original SVG illustrations and explicit preset targets remain available. They have **not** been analysed by MediaPipe. In the Operator desk, select **Default faces → Original illustrated demos**, then **Use selected defaults for all three** to clear any saved slot overrides and apply the original set. Select the checked human defaults and click the same button to switch back. Export your custom references first if you want to keep a backup of them. Changes require Reset family, so both players keep the same references within a session.
 
 1. Reset the family and open the gear.
 2. Choose Smile, Surprise, or Pout and enter the caption.
 3. Select a local JPG/PNG/WebP (under 12 MB), then **Analyse & save reference**.
 4. The app resizes the photo to at most 1000 pixels, analyses it once using the same model, and requires exactly one detected face and meaningful primary expression movement. Invalid images do not replace the existing reference.
-5. Repeat for all three slots. Use **Restore this demo** to undo a replacement.
+5. Repeat for all three slots. **Restore this demo** forces that slot back to its illustration. **Use selected defaults for all three** removes slot overrides and restores the chosen default set.
 
 Use front-facing, well-lit, visibly expressive human photos. Heavily distorted memes and cartoons may not yield useful measurements. A technically valid face does not guarantee a well-balanced game target; test it with several people.
 
-Reference photos, captions, model version and extracted targets are stored in this browser profile's **localStorage** at the exact `127.0.0.1:4173` origin. These are operator assets, separate from participant video. Different profiles/ports/`localhost` spelling have separate storage. Clearing site data removes them. **Export reference pack** backs up photos and targets as JSON; save the file in `public/references/` or another local folder. **Import reference pack** restores a pack without re-running analysis; only import your own exported, verified packs. Import validates structure, numeric ranges and model version, not a tamper-proof proof of analysis. To verify an unfamiliar photo, upload it normally. Export packs can contain people’s images; keep them appropriately.
+Custom reference photos, captions, model version, targets and explicit demo-slot overrides are stored in this browser profile's **localStorage** at the exact `127.0.0.1:4173` origin. Bundled defaults remain project files and need no browser storage. These are operator assets, separate from participant video. Different profiles/ports/`localhost` spelling have separate storage. Clearing site data removes custom overrides. **Export reference pack** backs up your overrides as JSON; save the file in `public/references/` or another local folder. **Import reference pack** restores a pack without re-running analysis; only import your own exported, verified packs. Import validates structure, numeric ranges and model version, not a tamper-proof proof of analysis. To verify an unfamiliar photo, upload it normally. Export packs can contain people’s images; keep them appropriately.
 
 ## What the AI does, and what the score means
 
@@ -115,7 +117,7 @@ Edit the `EXPRESSIONS` array in `public/scoring.js`, then reload Chrome:
 | Surprise | brow .50, wide .40, jaw .55 | .35, .25, .40 | .60 | smile .40, pucker .35 |
 | Pout | pucker .70, funnel .25 | .80, .20 | .60 | smile .55, jaw .45 |
 
-Raise tolerance slightly if normal variation is too harsh. Adjust the strongest feature's target/weight using observations across adults and children; avoid calibrating around just one person. Saved human photos replace preset targets, while weights/tolerance still apply. Restore a demo to test changed preset targets. Hold/timer settings are in `public/game.js` (`TIMING`). No neutral calibration is required. Run the scoring tests after changing the formula or weights.
+Raise tolerance slightly if normal variation is too harsh. Adjust the strongest feature's target/weight using observations across adults and children; avoid calibrating around just one person. Custom uploaded photos use the expression's standard weights from `scoring.js`; bundled photos have their own measured targets and tuned weights in `builtin-references.js`. The bundled grin emphasises smile/raised brows (.70/.30) and penalises an excessively open jaw; surprise emphasises brows/jaw (.45/.45) with .10 for weaker eye-wide output. Both use .65 tolerance. Restore a demo to test changed preset targets. Hold/timer settings are in `public/game.js` (`TIMING`). No neutral calibration is required. Run the scoring tests after changing the formula or weights.
 
 ## Offline preparation and test
 

@@ -8,6 +8,8 @@
     "vendor/wasm/vision_wasm_internal.js": "4a97e2520ba506c680ecd6ba6acfb146888afa0e2746d57f205352bc6ebb82eb",
     "vendor/wasm/vision_wasm_internal.wasm": "f00ec4731faa23b3e714d00e88d4d10e2df5c0a427d3a2b4ae6e3526fdd14ef7",
     "vendor/wasm/vision_wasm_nosimd_internal.js": "927def7b465c51b86e4b3060f93646aca4e27121f4b8fc0483786e407ea9cf1f",
-    "vendor/wasm/vision_wasm_nosimd_internal.wasm": "3821ea9b1f7fb8c549ef2a064ef5c85750bf375c545a49fd6eea0df44a95f1f4"
+    "vendor/wasm/vision_wasm_nosimd_internal.wasm": "3821ea9b1f7fb8c549ef2a064ef5c85750bf375c545a49fd6eea0df44a95f1f4",
+    "assets/memes/grin.png": "5d20fe7f3dd0b44e4f19be5d47c664e3087db5c4bdcac9b88a91387cfd066cd5",
+    "assets/memes/surprise.png": "3f864aae82b2f3b16f17ec62c89aba5f9cbb3c5ec1c1984c8eaefa55beda0f6c"
   }
 }

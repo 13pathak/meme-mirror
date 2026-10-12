@@ -8,6 +8,7 @@ Do this on the actual i5-1240P / Iris Xe / 16 GB laptop before the PTM. Automate
 - [ ] Open the camera lab. Verify smile, brow/eye/jaw and pucker/funnel readings visibly respond. Check GPU and CPU; record actual update rate and latency with a face in view. Select whichever works best.
 - [ ] Check at least several adults and children: different heights, glasses, ordinary lighting, and comfortable distance. Tilt/reposition the laptop or webcam so smaller participants can face it naturally.
 - [ ] Tune expression weights/tolerances fairly across people. Pout may be less consistent; replace its photo or simplify its target if needed. Do not call the score scientific accuracy or emotion detection.
+- [ ] Try the selected human grin and surprise with at least one adult and one child. If a target is awkward, reset and use Operator desk → Original illustrated demos → Use selected defaults for all three. Rehearse this fallback once.
 - [ ] Add and verify the three human references if desired. Export the reference pack as a backup. Restart Chrome and confirm it persists.
 - [ ] Connect the TV/projector/smartboard. Use F11, verify the full controls are visible, the caption and hold instructions are readable from the queue, and the camera preview is naturally mirrored. Use Chrome zoom-out if the laptop's display scaling clips the bottom controls.
 - [ ] Finish both turns with the same references. Test Retry, Next, Reset during each phase, ties, low scores, and the final comparison. Time five families; aim for 90–120 seconds each.
