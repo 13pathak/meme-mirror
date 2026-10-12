@@ -58,7 +58,13 @@ Open the **gear** at the top right. This pauses the round while keeping diagnost
 
 ## Add your human references
 
-The default set now uses two **supplied human photos analysed by the real local model**: photo 3 for a raised-brow grin and photo 4 for surprise. Their measured targets, weights and cues are in `public/builtin-references.js`; the local PNG files are bundled and checksum-checked. Pout keeps its illustrated demo because none of the supplied photos shows measurable lip puckering. See **REFERENCE-CHECKS.md** for the four-photo comparison and executed checks.
+The default set keeps the **working human grin (photo 3)**. Following live feedback, **The plot twist has been reverted to its original surprise illustration and preset target**; pout also keeps its original demo. The grin's measured target is in `public/builtin-references.js`. The retired surprise photo remains a historical asset and is not selected by the app. See **REFERENCE-CHECKS.md** for the original image checks and the subsequent live-feedback change.
+
+### More emoji expression memes
+
+Before Start, click **Choose memes 😁**. Pick exactly three different options: holiday smile/grin, surprise, pout, **wink 😉**, **laughing grin 😆**, and **scowl 😠**. Remove a selected tile before adding another; selection order is round order. Click **Use these three** to apply. Closing the chooser cancels changes. Both players get the same three selected memes and targets; choices persist for the next family. Reset the family to choose again. The original three remain the default, and Operator desk → **Use selected defaults for all three** restores their selection too.
+
+New emoji illustrations have **explicit game presets**; they were not analysed as human photographs. Wink scores the difference between the two eye-blink measurements and penalises both eyes closing, so either eye works. Laughing grin uses smile/squint/jaw movement; scowl uses brow lowering/lip press. Avoid straining, and try the new choices yourself before putting them in a live exhibition session. You can upload verified human references for any of the six slots in the Operator desk.
 
 The three original SVG illustrations and explicit preset targets remain available. They have **not** been analysed by MediaPipe. In the Operator desk, select **Default faces → Original illustrated demos**, then **Use selected defaults for all three** to clear any saved slot overrides and apply the original set. Select the checked human defaults and click the same button to switch back. Export your custom references first if you want to keep a backup of them. Changes require Reset family, so both players keep the same references within a session.
 
@@ -86,6 +92,9 @@ Related left/right coefficients are averaged into features in `public/scoring.js
 | jaw | jawOpen |
 | pucker / funnel | mouthPucker / mouthFunnel |
 | frown / press | paired mouthFrown / mouthPress |
+| wink | absolute difference of eyeBlinkLeft and eyeBlinkRight |
+| blinkBoth | minimum of eyeBlinkLeft and eyeBlinkRight (a conflict for wink) |
+| squint / browDown | paired eyeSquint / browDown |
 
 The video preview is mirrored with CSS; inference receives the unmirrored frame. Bilateral averages make left/right handling consistent for photos and participants.
 
@@ -117,7 +126,7 @@ Edit the `EXPRESSIONS` array in `public/scoring.js`, then reload Chrome:
 | Surprise | brow .50, wide .40, jaw .55 | .35, .25, .40 | .60 | smile .40, pucker .35 |
 | Pout | pucker .70, funnel .25 | .80, .20 | .60 | smile .55, jaw .45 |
 
-Raise tolerance slightly if normal variation is too harsh. Adjust the strongest feature's target/weight using observations across adults and children; avoid calibrating around just one person. Custom uploaded photos use the expression's standard weights from `scoring.js`; bundled photos have their own measured targets and tuned weights in `builtin-references.js`. The bundled grin emphasises smile/raised brows (.70/.30) and penalises an excessively open jaw; surprise emphasises brows/jaw (.45/.45) with .10 for weaker eye-wide output. Both use .65 tolerance. Restore a demo to test changed preset targets. Hold/timer settings are in `public/game.js` (`TIMING`). No neutral calibration is required. Run the scoring tests after changing the formula or weights.
+Raise tolerance slightly if normal variation is too harsh. Adjust the strongest feature's target/weight using observations across adults and children; avoid calibrating around just one person. Custom uploaded photos use the expression's standard weights from `scoring.js`; the working grin has its measured target and tuned weights in `builtin-references.js`. The grin emphasises smile/raised brows (.70/.30) and penalises an excessively open jaw; surprise again uses its original preset/weights. All six profiles and captions are in `scoring.js`. Restore a demo to test changed preset targets. Hold/timer settings are in `public/game.js` (`TIMING`). No neutral calibration is required. Run the scoring tests after changing the formula or weights. Existing eight-feature reference packs remain compatible; new features are required only for a profile that uses them.
 
 ## Offline preparation and test
 

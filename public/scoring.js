@@ -6,7 +6,12 @@ export const FEATURES = {
   jaw: ['jawOpen'], pucker: ['mouthPucker'], funnel: ['mouthFunnel'],
   frown: ['mouthFrownLeft', 'mouthFrownRight'],
   press: ['mouthPressLeft', 'mouthPressRight'],
+  wink: ['eyeBlinkLeft', 'eyeBlinkRight'],
+  blinkBoth: ['eyeBlinkLeft', 'eyeBlinkRight'],
+  squint: ['eyeSquintLeft', 'eyeSquintRight'],
+  browDown: ['browDownLeft', 'browDownRight'],
 };
+export const LEGACY_FEATURES = ['smile','brow','wide','jaw','pucker','funnel','frown','press'];
 export const EXPRESSIONS = [
   { id: 'smile', name: 'The holiday smile', caption: 'Tomorrow is a holiday!', cue: 'Lift the corners of your mouth. Big holiday energy!',
     target: { smile: .8 }, weights: { smile: 1 }, tolerance: .65, conflicts: { pucker: .55, frown: .5 }, color: 'yellow' },
@@ -14,16 +19,27 @@ export const EXPRESSIONS = [
     target: { brow: .5, wide: .4, jaw: .55 }, weights: { brow: .35, wide: .25, jaw: .4 }, tolerance: .6, conflicts: { smile: .4, pucker: .35 }, color: 'pink' },
   { id: 'pout', name: 'The samosa situation', caption: 'The last samosa is gone.', cue: 'Push your lips forward into a little pout. Keep your jaw relaxed.',
     target: { pucker: .7, funnel: .25 }, weights: { pucker: .8, funnel: .2 }, tolerance: .6, conflicts: { smile: .55, jaw: .45 }, color: 'blue' },
+  { id: 'wink', name: 'The secret snack', caption: 'I definitely did not eat the last samosa.', cue: 'Close either eye for a wink and give a little smile. Keep the other eye open.',
+    target: { wink: .7, smile: .35 }, weights: { wink: .8, smile: .2 }, tolerance: .65, conflicts: { blinkBoth: .7, jaw: .25 }, color: 'yellow' },
+  { id: 'laugh', name: 'The serious assembly', caption: 'When your friend makes you laugh in assembly.', cue: 'Give a big grin, narrow your eyes, and open your mouth a little.',
+    target: { smile: .8, squint: .4, jaw: .35 }, weights: { smile: .55, squint: .2, jaw: .25 }, tolerance: .65, conflicts: { pucker: .4, frown: .45 }, color: 'pink' },
+  { id: 'scowl', name: 'The games-period plot', caption: 'Games period has become maths.', cue: 'Bring your eyebrows together and gently press your lips. No need to strain.',
+    target: { browDown: .5, press: .3 }, weights: { browDown: .75, press: .25 }, tolerance: .65, conflicts: { smile: .5, brow: .4, jaw: .35 }, color: 'blue' },
 ];
 export const clamp = (v, lo = 0, hi = 1) => Math.max(lo, Math.min(hi, v));
 export function measurements(categories) {
   if (!Array.isArray(categories) || !categories.length) return null;
   const map = Object.fromEntries(categories.map(c => [c.categoryName, c.score]));
   if (Object.values(FEATURES).flat().some(k => !Number.isFinite(map[k]))) return null;
-  return Object.fromEntries(Object.entries(FEATURES).map(([key, names]) => [key, names.reduce((sum, n) => sum + clamp(map[n]), 0) / names.length]));
+  return Object.fromEntries(Object.entries(FEATURES).map(([key, names]) => {
+    const values = names.map(n=>clamp(map[n]));
+    const value = key === 'wink' ? Math.abs(values[0]-values[1]) : key === 'blinkBoth' ? Math.min(...values) : values.reduce((a,b)=>a+b,0)/values.length;
+    return [key,value];
+  }));
 }
 export function matchScore(sample, expression) {
-  if (!sample || Object.keys(FEATURES).some(k => !Number.isFinite(sample[k]))) return null;
+  const required = [...LEGACY_FEATURES, ...Object.keys(expression.weights), ...Object.keys(expression.conflicts)];
+  if (!sample || required.some(k => !Number.isFinite(sample[k]))) return null;
   const active = Object.entries(expression.weights).filter(([key, weight]) => weight > 0 && expression.target[key] >= .08);
   if (!active.length) return null;
   const total = active.reduce((s, [, w]) => s + w, 0);

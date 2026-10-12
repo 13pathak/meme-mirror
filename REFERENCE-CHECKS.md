@@ -1,5 +1,7 @@
 # Supplied reference-photo checks — 12 October 2026
 
+**Live-feedback update:** only the grin was reported to work well in practice. The surprise photograph has therefore been removed from the default profiles, and **The plot twist now uses the original surprise SVG and preset target**. The image checks below remain historical evidence and do not establish live imitation quality. The working grin is retained. Wink, laughing-grin and scowl emoji memes have been added as selectable explicit presets.
+
 All four supplied photos were processed by the actual local Face Landmarker in **CPU and GPU** modes. Both modes detected **one face in every image**. Model: `face_landmarker/float16/1`; package: `@mediapipe/tasks-vision@0.10.21`.
 
 The following CPU measurements are movement coefficients, not emotion labels or accuracy percentages. Targets in `public/builtin-references.js` store the full unrounded measurement vectors from photos 3 and 4.

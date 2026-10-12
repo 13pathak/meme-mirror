@@ -26,8 +26,8 @@ test('bundled photos are detectable, repeatable and discriminating on both CPU a
         const video=await request({type:'frame',bitmap:videoBitmap,time:performance.now()},[videoBitmap]);
         const videoSample=measurements(video.categories);
         const neutral=Object.fromEntries(Object.keys(FEATURES).map(k=>[k,0]));
-        const other=Object.values(BUILTIN_REFERENCES).find(r=>r!==ref);
-        rows.push({expression:key,delegate:ready.delegate,photoFaces:result.count,videoFaces:video.count,photoScore:matchScore(sample,profile),videoScore:matchScore(videoSample,profile),neutralScore:matchScore(neutral,profile),otherPhotoScore:matchScore(other.target,profile)});
+        const other={...neutral,...EXPRESSIONS.find(e=>e.id==='surprise').target};
+        rows.push({expression:key,delegate:ready.delegate,photoFaces:result.count,videoFaces:video.count,photoScore:matchScore(sample,profile),videoScore:matchScore(videoSample,profile),neutralScore:matchScore(neutral,profile),otherPhotoScore:matchScore(other,profile)});
       }
       worker.terminate();
     }
@@ -47,7 +47,7 @@ test('checked photos are the defaults and all original illustrated defaults can 
   await expect(page.locator('#reference-image')).toHaveAttribute('src','/assets/memes/grin.png');
 });
 
-test('real model and camera pipeline complete grin and surprise rounds using the selected photos',async({page})=>{
+test('real model completes the grin and Next uses the restored original surprise demo',async({page})=>{
   // A static photo streamed through a native video track, not a real participant.
   await page.addInitScript(()=>{
     navigator.mediaDevices.getUserMedia=async()=>{
@@ -70,8 +70,6 @@ test('real model and camera pipeline complete grin and surprise rounds using the
   expect(await page.locator('#reveal-photo').evaluate(canvas=>[canvas.width,canvas.height])).toEqual([640,480]);
   await page.screenshot({path:'test-results/real-model-reference-reveal.png',fullPage:true});
   await expect(page.locator('#round-reveal')).toBeHidden({timeout:6000});await expect(page.locator('#next')).toBeEnabled();
-  await page.locator('#next').click();await expect(page.locator('#reference-image')).toHaveAttribute('src','/assets/memes/surprise.png');
-  await expect(page.locator('#round-reveal')).toBeVisible({timeout:30000});
-  const surpriseScore=parseInt(await page.locator('#reveal-score').textContent());expect(surpriseScore).toBeGreaterThan(80);
-  console.log('Real-model synthetic camera round scores:',{grin:score,surprise:surpriseScore});
+  await page.locator('#next').click();await expect(page.locator('#reference-image')).toHaveAttribute('src','/assets/surprise.svg');
+  await expect(page.locator('#reference-kind')).toHaveText('ILLUSTRATED DEMO');
 });

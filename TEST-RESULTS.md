@@ -1,5 +1,13 @@
 # Test results — 12 October 2026
 
+## Surprise revert and emoji meme chooser
+
+- Restored the original plot-twist surprise illustration/target after user live feedback. The working grin is preserved. Static photo tests from the earlier version did not establish live usability of the retired surprise photograph.
+- **24 unit tests passed**, including all six expression presets, three-choice validation, either-eye wink handling, two-eye-closure rejection, and compatibility with existing eight-feature reference packs.
+- Four targeted Chrome checks passed: actual CPU/GPU inference still matches the working grin; its real-model round completes and Next loads the restored surprise SVG; default/demo overrides remain usable; the six-tile emoji chooser cancels safely, persists three choices and carries them through both players' complete turns.
+- Ten existing Chrome regression checks also passed (camera/model execution, original three-round flow, reference import, permissions, fallback, timed photo reveal and cleanup), followed by a targeted operator-fallback/mobile-layout check. **15 browser checks passed in total across these runs.** Desktop/mobile chooser screenshots were inspected.
+- New emoji targets are presets. Their scoring and flow are tested with synthetic measurements; live wink/laugh/scowl imitation still needs manual testing.
+
 ## Selected human-reference update
 
 - **16 Node tests and the complete 13-test Chrome suite passed** with the selected human references and the original demos available.

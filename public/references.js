@@ -1,4 +1,4 @@
-import { EXPRESSIONS, FEATURES, validateReference } from './scoring.js';
+import { EXPRESSIONS, FEATURES, LEGACY_FEATURES, validateReference } from './scoring.js';
 const KEY = 'meme-mirror-operator-references-v1';
 export const MODEL = 'face_landmarker/float16/1 + tasks-vision/0.10.21';
 export function readReferences() {
@@ -11,8 +11,9 @@ export function validatePack(pack) {
     const expression = EXPRESSIONS.find(e => e.id === key);
     if (expression && ref?.demo === true) { clean[key] = { demo: true }; continue; }
     if (!expression || ref.model !== MODEL || typeof ref.caption !== 'string' || ref.caption.length > 100 || !/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(ref.image) || ref.image.length > 2200000) throw new Error('Invalid or incompatible reference pack. Import photos again with this model.');
-    if (Object.keys(FEATURES).some(k => !Number.isFinite(ref.target?.[k]) || ref.target[k] < 0 || ref.target[k] > 1) || validateReference(ref.target, expression)) throw new Error('Invalid expression target in reference pack.');
-    clean[key] = { model: MODEL, caption: ref.caption, image: ref.image, target: Object.fromEntries(Object.keys(FEATURES).map(k => [k, ref.target[k]])) };
+    const required = [...LEGACY_FEATURES, ...Object.keys(expression.weights)];
+    if (required.some(k => !Number.isFinite(ref.target?.[k])) || Object.keys(FEATURES).some(k => ref.target?.[k] != null && (!Number.isFinite(ref.target[k]) || ref.target[k] < 0 || ref.target[k] > 1)) || validateReference(ref.target, expression)) throw new Error('Invalid expression target in reference pack.');
+    clean[key] = { model: MODEL, caption: ref.caption, image: ref.image, target: Object.fromEntries(Object.keys(FEATURES).filter(k=>ref.target[k]!=null).map(k => [k, ref.target[k]])) };
   }
   return clean;
 }

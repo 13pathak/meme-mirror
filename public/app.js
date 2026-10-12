@@ -4,6 +4,7 @@ import { VisionCamera } from './camera.js';
 import { MODEL, readReferences, saveReferences, preparePhoto, validatePack } from './references.js';
 import { RoundReveal } from './reveal.js';
 import { effectiveReferences } from './builtin-references.js';
+import { DEFAULT_MEMES, MEME_ICONS, readSelection, saveSelection, selectedProfiles } from './meme-library.js';
 const $ = selector => document.querySelector(selector);
 const game = new Game(), smoother = new Smoother();
 const reveal = new RoundReveal($('#round-reveal'), () => {
@@ -18,11 +19,9 @@ let defaultSet = 'checked';
 try { if (localStorage.getItem('meme-mirror-default-set-v1') === 'demo') defaultSet = 'demo'; } catch {}
 $('#reference-set').value = defaultSet;
 let recent = [], lastResult, lastRendered = '', lastExpression = '', refBusy = false;
-const expression = () => {
-  const base = EXPRESSIONS[game.round];
-  const ref = (activeReferences || effectiveReferences(references, defaultSet))[base.id];
-  return ref ? { ...base, ...ref } : base;
-};
+let chosenMemes = readSelection(), activeSelection = null, draftMemes = [];
+const roundProfiles = () => selectedProfiles(activeSelection || chosenMemes, activeReferences || effectiveReferences(references, defaultSet));
+const expression = () => roundProfiles()[game.round];
 const status = message => { tracking = message; $('#tracking-message').textContent = message; $('#operator-status').textContent = message; };
 const camera = new VisionCamera($('#camera'), result => {
   const now = performance.now();
@@ -48,7 +47,7 @@ const camera = new VisionCamera($('#camera'), result => {
 camera.captureFrame = () => game.phase === 'hold' && !$('#operator').open;
 
 function reset() {
-  game.reset(); smoother.clear(); activeReferences = null; lastRendered = ''; lastExpression = '';
+  game.reset(); smoother.clear(); activeReferences = null; activeSelection = null; lastRendered = ''; lastExpression = '';
   reveal.hide();
   document.body.classList.remove('celebrating'); render(performance.now());
 }
@@ -84,11 +83,12 @@ function render(now) {
   drawExpression();
   const phase = game.phase, playing = ['prep','attempt','hold'].includes(phase), result = phase === 'result';
   $('#start').hidden = phase !== 'idle'; $('#start').disabled = !camera.running || starting || refBusy;
+  $('#choose-memes').disabled = phase !== 'idle' || refBusy;
   $('#next').hidden = !['result','switch'].includes(phase);
   $('#next').disabled = $('#round-reveal').open;
   $('#retry').hidden = !['result','failed'].includes(phase);
   $('#retry').disabled = $('#round-reveal').open;
-  $('#next').textContent = phase === 'switch' ? 'Start parent’s turn →' : game.round === 2 ? game.player === 0 ? 'Parent’s turn →' : 'See family scores →' : 'Next face →';
+  $('#next').textContent = phase === 'switch' ? 'Start parent’s turn →' : game.round === 2 ? game.player === 0 ? 'Parent’s turn →' : 'See family scores →' : 'Next meme →';
   $('#camera-placeholder').hidden = camera.running;
   $('#camera-indicator').textContent = camera.running ? '● LIVE · ONLY ON THIS DEVICE' : 'CAMERA OFF';
   $('#enable-camera').textContent = starting ? 'Getting ready…' : 'Enable camera ↗';
@@ -96,6 +96,7 @@ function render(now) {
   $('#turn-label').textContent = phase === 'complete' ? 'FAMILY COMPLETE!' : game.player === 0 ? 'CHILD’S TURN' : 'PARENT’S TURN';
   for (const round of document.querySelectorAll('[data-round]')) {
     const index = Number(round.dataset.round); const score = game.scores[game.player][index];
+    round.querySelector('span:not(.round-score)').textContent = roundProfiles()[index].name;
     round.classList.toggle('active', index === game.round); round.classList.toggle('done', score != null);
     round.querySelector('.round-score').textContent = score == null ? '' : `· ${score}`;
   }
@@ -109,7 +110,7 @@ function render(now) {
   if (renderKey !== lastRendered) {
     lastRendered = renderKey;
     const text = {
-      idle: ['READY WHEN YOU ARE', 'A smile is a great place to start.', 'Child first, then parent. The same three faces for both.'],
+      idle: ['READY WHEN YOU ARE', 'A smile is a great place to start.', 'Child first, then parent. The same three memes for both.'],
       prep: [`ROUND ${game.round+1} OF 3 · GET READY`, 'Take a look. Make that face!', 'You have a few seconds to find your expression.'],
       attempt: ['COPY THE FACE', game.live == null ? 'Let’s get you back in view.' : `Try it out! ${remaining} seconds to play.`, game.live == null ? 'Your timer is paused. One face in the camera, please.' : expression().cue],
       hold: ['NOW, HOLD IT', game.live == null ? 'Back in view, then hold again.' : 'Freeze that wonderful face!', 'Keep it steady for about two seconds.'],
@@ -126,7 +127,7 @@ function render(now) {
     const totals = game.scores.map(scores => scores.reduce((a,b) => a+b, 0));
     $('#child-total').textContent = totals[0]; $('#parent-total').textContent = totals[1];
     $('#comparison').textContent = totals[0] === totals[1] ? 'An expression tie! Great minds make great faces.' : `${totals[0] > totals[1] ? 'Child' : 'Parent'} takes the match-score ribbon. Both take the applause!`;
-    $('#round-summary').textContent = EXPRESSIONS.map((e,i) => `${e.id[0].toUpperCase()+e.id.slice(1)}: child ${game.scores[0][i]} · parent ${game.scores[1][i]}`).join('   /   ');
+    $('#round-summary').textContent = roundProfiles().map((e,i) => `${e.name}: child ${game.scores[0][i]} · parent ${game.scores[1][i]}`).join('   /   ');
   }
   if ($('#operator').open && lastResult) {
     const hz = recent.length > 1 ? (recent.length-1)*1000 / (recent.at(-1).received - recent[0].received) : 0;
@@ -136,11 +137,50 @@ function render(now) {
 }
 function frame(now) { if (!document.hidden && !$('#operator').open) game.tick(now); else { game.lastTick = now; game.invalidate(); smoother.clear(); } render(now); requestAnimationFrame(frame); }
 $('#enable-camera').onclick = enableCamera;
-$('#start').onclick = () => { if (!camera.running || refBusy) return; activeReferences = structuredClone(effectiveReferences(references, defaultSet)); smoother.clear(); game.start(performance.now()); };
+$('#start').onclick = () => { if (!camera.running || refBusy) return; activeSelection = [...chosenMemes]; activeReferences = structuredClone(effectiveReferences(references, defaultSet)); smoother.clear(); game.start(performance.now()); };
 $('#next').onclick = () => { if ($('#round-reveal').open) return; reveal.hide(); smoother.clear(); game.next(performance.now()); if (game.phase === 'complete') { render(performance.now()); $('#summary').scrollIntoView({ behavior: 'smooth', block: 'center' }); } };
 $('#retry').onclick = () => { if ($('#round-reveal').open) return; reveal.hide(); smoother.clear(); game.retry(performance.now()); };
 $('#reset').onclick = reset; $('#new-family').onclick = () => { reset(); window.scrollTo({ top: 0 }); };
 $('#reveal-reset').onclick = reset;
+function openMemeLibrary() {
+  if (game.phase !== 'idle' || refBusy) return;
+  draftMemes=[...chosenMemes];
+  const refs = effectiveReferences(references, defaultSet);
+  for (const expression of EXPRESSIONS) {
+    const tile = document.querySelector(`[data-meme="${expression.id}"]`);
+    const selected = chosenMemes.indexOf(expression.id);
+    tile.setAttribute('aria-pressed',selected>=0);
+    tile.querySelector('.meme-round').textContent = selected>=0 ? `ROUND ${selected+1}` : 'ADD TO YOUR THREE';
+    tile.querySelector('img').src = refs[expression.id]?.image || `/assets/${expression.id}.svg`;
+  }
+  $('#library-status').textContent = 'Pick three different memes. Both players get your same choices.';
+  $('#meme-library').showModal();
+}
+$('#choose-memes').onclick = () => {openMemeLibrary();$('#apply-memes').disabled=false;};
+$('#library-close').onclick = () => $('#meme-library').close();
+for (const item of EXPRESSIONS) {
+  const tile = document.createElement('button'); tile.type='button';tile.className=`meme-tile ${item.color}`;tile.dataset.meme=item.id;
+  const image=document.createElement('img');image.alt=`${MEME_ICONS[item.id]} ${item.name}`;
+  const badge=document.createElement('span');badge.className='meme-round';
+  const name=document.createElement('strong');name.textContent=`${MEME_ICONS[item.id]} ${item.name}`;
+  const caption=document.createElement('span');caption.className='meme-tile-caption';caption.textContent=item.caption;
+  tile.append(badge,image,name,caption);
+  tile.onclick=()=>{
+    const next=[...draftMemes];const index=next.indexOf(item.id);
+    if(index>=0)next.splice(index,1);
+    else if(next.length<3)next.push(item.id);
+    else {$('#library-status').textContent='Remove one selected meme first, then add your new choice.';return;}
+    draftMemes=next;
+    for(const button of $('#meme-options').children){const rank=next.indexOf(button.dataset.meme);button.setAttribute('aria-pressed',rank>=0);button.querySelector('.meme-round').textContent=rank>=0?`ROUND ${rank+1}`:'ADD TO YOUR THREE';}
+    $('#library-status').textContent=`${next.length} of 3 selected. Selection order is the round order.`;
+    $('#apply-memes').disabled=next.length!==3;
+  };
+  $('#meme-options').append(tile);
+}
+$('#apply-memes').onclick=()=>{
+  try {requireIdle();saveSelection(draftMemes);chosenMemes=[...draftMemes];lastExpression='';$('#meme-library').close();render(performance.now());}
+  catch(e){$('#library-status').textContent=e.message;}
+};
 $('#fullscreen').onclick = async () => { try { if (document.fullscreenElement) await document.exitFullscreen(); else await document.documentElement.requestFullscreen(); } catch { status('Use Chrome’s F11 key for fullscreen.'); } };
 $('#operator-open').onclick = () => { game.invalidate(); smoother.clear(); $('#operator').showModal(); };
 $('#operator-close').onclick = () => $('#operator').close();
@@ -154,13 +194,14 @@ $('#reference-set').onchange = () => {
     if (refBusy) throw new Error('Wait for photo analysis to finish.');
     defaultSet = $('#reference-set').value; lastExpression = '';
     try { localStorage.setItem('meme-mirror-default-set-v1', defaultSet); } catch {}
-    $('#reference-status').textContent = defaultSet === 'checked' ? 'Checked human photos selected. Pout keeps its demo; your saved slot overrides still apply.' : 'Original illustrated defaults selected. Your saved slot overrides still apply.';
+    $('#reference-status').textContent = defaultSet === 'checked' ? 'Working grin selected. Surprise and pout keep their original demos; your saved slot overrides still apply.' : 'Original illustrated defaults selected. Your saved slot overrides still apply.';
   } catch (e) { $('#reference-set').value = defaultSet; $('#reference-status').textContent = e.message; }
 };
 $('#restore-defaults').onclick = () => {
   try {
     requireIdle();
     if (refBusy) throw new Error('Wait for photo analysis to finish.');
+    saveSelection(DEFAULT_MEMES);chosenMemes=[...DEFAULT_MEMES];
     saveReferences({}); references = {}; lastExpression = '';
     $('#reference-status').textContent = 'All three slots now use the selected defaults.';
   } catch (e) { $('#reference-status').textContent = e.message; }
