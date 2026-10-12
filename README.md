@@ -110,11 +110,13 @@ match = 100 * clamp((1 - E) * A - P, 0, 1)
 
 Only expression-specific active movements earn points. Matching zeros in dozens of unrelated blendshapes earns nothing. `A` penalises absent target movement, and `P` penalises conflicting movements above the reference's own baseline plus a small deadband. Exact target movements score 100; a neutral face scores 0 for the presets. Low scores can still complete a round: holding steady is enough; no minimum score gate excludes participants.
 
-Features are exponentially smoothed using a **180 ms** time constant. Each round has **3 seconds preparation**, **7 seconds experimentation**, then up to **6.5 seconds** to find a stable **1.8-second hold** with at least **10 samples** and a score range no larger than **18 points**. The final score is the rounded arithmetic mean of the held, smoothed sample scores. Stability refers to score variation, not proof that every facial muscle was motionless. It does not select the highest-scoring frame.
+Features are exponentially smoothed using a **180 ms** time constant. Each round has **3 seconds preparation**, **4 seconds experimentation**, then a comfortable **1-second tracked hold** with at least **3 fresh samples**. Changes in match score do not restart or lengthen the hold, and no minimum match score is required—even a zero-score tracked attempt completes. The final score is the rounded arithmetic mean of all smoothed scores during that short continuous hold. **100% held measures elapsed hold time, not expression accuracy.** This avoids making visitors struggle to maintain an exact expression while keeping the match score honest.
+
+The hold phase has a 2.5-second processing deadline; insufficient camera updates prompt a fresh-view retry. Face loss/multiple faces still clear the hold buffer. The short duration and sample count are adjustable in `TIMING` in `public/game.js`.
 
 No-face, multi-face, malformed measurements, hidden tabs, and results older than **500 ms** clear the live score and hold buffer. Tracking loss pauses the attempt and eventually requests Retry after 15 seconds. Background tabs and the operator dialog pause round timers. Inference accepts up to two faces for rejection purposes, but scores only one; application smoothing replaces MediaPipe's one-face-only built-in smoothing.
 
-Each player totals three scores, **out of 300**. Active time is about 71 seconds for six successful rounds, plus 15 seconds of photo reveals, instructions, results and handover: roughly **90–120 seconds per family** is the intended pace, still requiring a timed rehearsal.
+Each player totals three scores, **out of 300**. Active time is about 48 seconds for six successful rounds, plus 15 seconds of photo reveals, instructions, results and handover: roughly **75–100 seconds per family** is the intended pace, still requiring a timed rehearsal.
 
 ### Tune after testing
 

@@ -12,8 +12,9 @@ Do this on the actual i5-1240P / Iris Xe / 16 GB laptop before the PTM. Automate
 - [ ] If using the new wink, laughing grin or scowl emojis, try each yourself and with a child before the exhibition. Choose the three most comfortable options in Choose memes; both players must receive the same selection.
 - [ ] Add and verify the three human references if desired. Export the reference pack as a backup. Restart Chrome and confirm it persists.
 - [ ] Connect the TV/projector/smartboard. Use F11, verify the full controls are visible, the caption and hold instructions are readable from the queue, and the camera preview is naturally mirrored. Use Chrome zoom-out if the laptop's display scaling clips the bottom controls.
-- [ ] Finish both turns with the same references. Test Retry, Next, Reset during each phase, ties, low scores, and the final comparison. Time five families; aim for 90–120 seconds each.
+- [ ] Finish both turns with the same references. Test Retry, Next, Reset during each phase, ties, low scores, and the final comparison. Time five families; the shorter hold aims for about 75–100 seconds each, including handover.
 - [ ] Verify each completed hold briefly shows the correct mirrored picture and match score, then clears after 2.5 seconds. Test Reset during the reveal and confirm the picture disappears immediately. Check that the picture and percentage are readable on the exhibition display.
+- [ ] Try a weak/approximate pout while adjusting your lips. With one face continuously tracked, 100% held should finish after about one second without restarting when the match score changes. The match score may remain low; completion should still be cheerful.
 - [ ] Have a spectator enter the frame. Confirm “One face at a time” and no valid hold. Step out during the hold; confirm the score clears and the hold restarts.
 - [ ] Open/close the operator desk and switch browser tabs mid-round; confirm the round resumes without a stale score.
 - [ ] Run continuously for **at least 30 minutes** with repeated families and resets. Watch for stalls, memory growth, overheating, increased latency and camera interruptions. No forced refresh should be needed.

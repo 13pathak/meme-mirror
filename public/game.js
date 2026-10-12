@@ -1,4 +1,4 @@
-export const TIMING = { prep: 3000, attempt: 7000, hold: 1800, holdDeadline: 6500, lostLimit: 15000, stale: 500, stableRange: 18, minSamples: 10 };
+export const TIMING = { prep: 3000, attempt: 4000, hold: 1000, holdDeadline: 2500, lostLimit: 15000, stale: 500, minSamples: 3 };
 export class Game {
   constructor(timing = TIMING) { this.timing = timing; this.reset(); }
   reset() {
@@ -12,10 +12,8 @@ export class Game {
     this.live = score; this.lastSample = now;
     if (this.phase === 'hold') {
       this.samples.push({ score, time: now });
-      const cutoff = now - this.timing.hold;
-      while (this.samples.length > 1 && this.samples[1].time <= cutoff) this.samples.shift();
-      const values = this.samples.map(x => x.score);
-      if (Math.max(...values) - Math.min(...values) > this.timing.stableRange) this.samples = [{ score, time: now }];
+      // Hold completion is about fresh tracking and time, not accuracy or score stability.
+      // Keep the short continuous window even when someone adjusts their expression.
       if (this.samples.length >= this.timing.minSamples && now - this.samples[0].time >= this.timing.hold) {
         this.result = Math.round(this.samples.reduce((sum, x) => sum + x.score, 0) / this.samples.length);
         this.scores[this.player][this.round] = this.result;
@@ -38,7 +36,7 @@ export class Game {
     if (this.remaining > 0) return;
     if (this.phase === 'prep') { this.phase = 'attempt'; this.remaining = this.timing.attempt; }
     else if (this.phase === 'attempt') { this.phase = 'hold'; this.remaining = this.timing.holdDeadline; this.samples = []; }
-    else { this.phase = 'failed'; this.reason = 'Almost there! Retry and hold your face still for two seconds.'; }
+    else { this.phase = 'failed'; this.reason = 'The camera needs a fresh view. Look at the camera and retry.'; }
   }
   next(now) {
     if (this.phase === 'result') {

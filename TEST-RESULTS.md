@@ -1,5 +1,12 @@
 # Test results — 12 October 2026
 
+## Comfortable hold update
+
+- **26 unit tests and 13 Chrome checks passed across two targeted runs.** A weak, fluctuating samosa expression completed in the short hold without progress resets; its final match score remained below 50. The complete round, including preparation and practice, reached the reveal within 8.5 seconds in the controlled test.
+- The hold is now **1 second with at least 3 fresh samples**, with no score-variation restart and no minimum match score. Unit tests cover fluctuating low scores, a tracked zero-score attempt, and tracking loss clearing the hold. Practice time is reduced from 7 to 4 seconds for every meme.
+- Photo-reveal timing/cleanup, retries, parent/child turns, all six emoji choices, reference persistence, real CPU/GPU model execution, and the working-grin camera pipeline passed. The 2.5-second reveal remains unchanged.
+- The weak-pout check uses simulated measurements and a synthetic frame, not a real participant. The change addresses the restrictive game rules; it does not claim a new live-camera benchmark or validated expression accuracy.
+
 ## Surprise revert and emoji meme chooser
 
 - Restored the original plot-twist surprise illustration/target after user live feedback. The working grin is preserved. Static photo tests from the earlier version did not establish live usability of the retired surprise photograph.

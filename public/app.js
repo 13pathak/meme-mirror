@@ -104,7 +104,7 @@ function render(now) {
   $('#live-score').textContent = displayedScore == null ? '—' : Math.round(displayedScore);
   $('#meter-fill').style.width = `${displayedScore || 0}%`; $('.meter').setAttribute('aria-valuenow', Math.round(displayedScore || 0));
   $('#hold-progress').textContent = phase === 'hold' ? `${Math.round(game.holdProgress * 100)}% held` : '';
-  $('#meter-note').textContent = phase === 'hold' ? 'Hold still. We’re averaging your expression.' : 'A playful game score, not an emotion reading.';
+  $('#meter-note').textContent = phase === 'hold' ? 'Just one second. Every tracked attempt counts.' : 'A playful game score, not an emotion reading.';
   const remaining = Math.max(0, Math.ceil(game.remaining / 1000));
   const renderKey = `${phase}:${game.player}:${game.round}:${remaining}:${game.live == null}`;
   if (renderKey !== lastRendered) {
@@ -113,8 +113,8 @@ function render(now) {
       idle: ['READY WHEN YOU ARE', 'A smile is a great place to start.', 'Child first, then parent. The same three memes for both.'],
       prep: [`ROUND ${game.round+1} OF 3 · GET READY`, 'Take a look. Make that face!', 'You have a few seconds to find your expression.'],
       attempt: ['COPY THE FACE', game.live == null ? 'Let’s get you back in view.' : `Try it out! ${remaining} seconds to play.`, game.live == null ? 'Your timer is paused. One face in the camera, please.' : expression().cue],
-      hold: ['NOW, HOLD IT', game.live == null ? 'Back in view, then hold again.' : 'Freeze that wonderful face!', 'Keep it steady for about two seconds.'],
-      result: ['ROUND COMPLETE', `${game.result} / 100 · ${game.result >= 75 ? 'What an expression!' : game.result >= 40 ? 'You brought it to life!' : 'Thanks for giving it a go!'}`, 'Your match score is the average of your steady hold.'],
+      hold: ['NOW, HOLD IT', game.live == null ? 'Back in view, then hold again.' : 'That’s it—hold for one second!', 'A small effort counts. No perfect match needed.'],
+      result: ['ROUND COMPLETE', `${game.result} / 100 · ${game.result >= 75 ? 'What an expression!' : game.result >= 40 ? 'You brought it to life!' : 'Thanks for giving it a go!'}`, 'Your match score is the average of your short hold.'],
       failed: ['LET’S TRY THAT AGAIN', 'A fresh take?', game.reason || 'Face the camera and retry.'],
       switch: ['PASS THE SPOTLIGHT', 'Your turn, parent!', 'Same faces. Same challenge. A brand-new performance.'],
       complete: ['THAT’S A WRAP', 'A round of applause for both of you!', 'Your family’s expression scores are below.'],
