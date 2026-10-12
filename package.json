@@ -1,0 +1,16 @@
+{
+  "name": "meme-mirror",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "setup": "node scripts/setup.mjs",
+    "start": "node scripts/server.mjs",
+    "check:assets": "node scripts/check-assets.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "test:browser": "playwright test"
+  },
+  "dependencies": { "@mediapipe/tasks-vision": "0.10.21" },
+  "devDependencies": { "@playwright/test": "1.56.1" }
+}

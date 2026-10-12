@@ -1,0 +1,2 @@
+import { defineConfig } from '@playwright/test';
+export default defineConfig({ testDir: './tests/browser', timeout: 90000, workers: 1, reporter: 'list', use: { channel: process.env.CHROME_PATH ? undefined : process.env.PW_CHANNEL || 'chrome', launchOptions: process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : {}, baseURL: 'http://127.0.0.1:4173', viewport: { width: 1440, height: 1000 }, screenshot: 'only-on-failure' } });
