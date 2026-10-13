@@ -3,7 +3,7 @@ export const TIMING = { prep: 3000, attempt: 4000, hold: 1000, holdDeadline: 100
 export class Game {
   constructor(timing = TIMING) { this.timing = { ...TIMING, ...timing }; this.reset(); }
   reset() {
-    this.phase = 'idle'; this.player = 0; this.round = 0; this.scores = [[], []];
+    this.phase = 'idle'; this.player = 0; this.round = 0; this.scores = [[], []]; this.skipped = [[], []];
     this.sample = null; this.live = null; this.clearHold(); this.lastSample = -Infinity; this.loss = 0;
   }
   start(now) { this.reset(); this.begin(now); }
@@ -60,6 +60,15 @@ export class Game {
       else if (this.player === 0) this.phase = 'switch';
       else this.phase = 'complete';
     } else if (this.phase === 'switch') { this.player = 1; this.round = 0; this.begin(now); }
+  }
+  get canSkip() { return ['attempt','hold','failed'].includes(this.phase); }
+  skip(now) {
+    if (!this.canSkip) return;
+    this.scores[this.player][this.round] = 0;
+    this.skipped[this.player][this.round] = true;
+    this.invalidate(); this.result = null;
+    // Use the same round/handover path, without showing a successful match reveal.
+    this.phase = 'result'; this.next(now);
   }
   retry(now) { if (['result','failed'].includes(this.phase)) { this.scores[this.player][this.round] = undefined; this.begin(now); } }
   get holdProgress() { return this.phase === 'result' ? 1 : Math.min(.99, this.held / this.timing.hold); }

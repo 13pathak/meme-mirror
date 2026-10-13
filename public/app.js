@@ -88,6 +88,7 @@ function render(now) {
   $('#next').disabled = $('#round-reveal').open;
   $('#retry').hidden = !['result','failed'].includes(phase);
   $('#retry').disabled = $('#round-reveal').open;
+  $('#skip').hidden = !game.canSkip;
   $('#next').textContent = phase === 'switch' ? 'Start parent’s turn →' : game.round === 2 ? game.player === 0 ? 'Parent’s turn →' : 'See family scores →' : 'Next meme →';
   $('#camera-placeholder').hidden = camera.running;
   $('#camera-indicator').textContent = camera.running ? '● LIVE · ONLY ON THIS DEVICE' : 'CAMERA OFF';
@@ -97,8 +98,8 @@ function render(now) {
   for (const round of document.querySelectorAll('[data-round]')) {
     const index = Number(round.dataset.round); const score = game.scores[game.player][index];
     round.querySelector('span:not(.round-score)').textContent = roundProfiles()[index].name;
-    round.classList.toggle('active', index === game.round); round.classList.toggle('done', score != null);
-    round.querySelector('.round-score').textContent = score == null ? '' : `· ${score}`;
+    round.classList.toggle('active', index === game.round); round.classList.toggle('done', score != null && !game.skipped[game.player][index]);
+    round.querySelector('.round-score').textContent = score == null ? '' : game.skipped[game.player][index] ? '· skipped (0)' : `· ${score}`;
   }
   const displayedScore = result ? game.result : playing ? game.live : null;
   $('#live-score').textContent = displayedScore == null ? '—' : Math.round(displayedScore);
@@ -116,7 +117,7 @@ function render(now) {
       attempt: ['COPY THE FACE', game.live == null ? 'Let’s get you back in view.' : `Try it out! ${remaining} seconds to play.`, game.live == null ? 'Your timer is paused. One face in the camera, please.' : expression().cue],
       hold: [matching ? 'NOW, HOLD IT' : 'FIND THE EXPRESSION', game.live == null ? 'Back in view, then hold again.' : matching ? 'That’s it—hold for one second!' : 'Copy the main expression. You have time!', matching ? 'Small wobbles are okay. No exact copy needed.' : expression().cue],
       result: ['ROUND COMPLETE', `${game.result} / 100 · ${game.result >= 75 ? 'What an expression!' : game.result >= 40 ? 'You brought it to life!' : 'Thanks for giving it a go!'}`, 'Your match score is the average of your short hold.'],
-      failed: ['LET’S TRY THAT AGAIN', 'A fresh take?', `${game.reason || 'Face the camera and retry.'} ${expression().cue}`],
+      failed: ['LET’S TRY THAT AGAIN', 'Retry or skip this meme.', `${game.reason || 'Face the camera and retry.'} ${expression().cue}`],
       switch: ['PASS THE SPOTLIGHT', 'Your turn, parent!', 'Same faces. Same challenge. A brand-new performance.'],
       complete: ['THAT’S A WRAP', 'A round of applause for both of you!', 'Your family’s expression scores are below.'],
     }[phase];
@@ -128,7 +129,8 @@ function render(now) {
     const totals = game.scores.map(scores => scores.reduce((a,b) => a+b, 0));
     $('#child-total').textContent = totals[0]; $('#parent-total').textContent = totals[1];
     $('#comparison').textContent = totals[0] === totals[1] ? 'An expression tie! Great minds make great faces.' : `${totals[0] > totals[1] ? 'Child' : 'Parent'} takes the match-score ribbon. Both take the applause!`;
-    $('#round-summary').textContent = roundProfiles().map((e,i) => `${e.name}: child ${game.scores[0][i]} · parent ${game.scores[1][i]}`).join('   /   ');
+    const roundScore = (player, i) => game.skipped[player][i] ? 'skipped (0)' : game.scores[player][i];
+    $('#round-summary').textContent = roundProfiles().map((e,i) => `${e.name}: child ${roundScore(0,i)} · parent ${roundScore(1,i)}`).join('   /   ');
   }
   if ($('#operator').open && lastResult) {
     const hz = recent.length > 1 ? (recent.length-1)*1000 / (recent.at(-1).received - recent[0].received) : 0;
@@ -141,6 +143,12 @@ $('#enable-camera').onclick = enableCamera;
 $('#start').onclick = () => { if (!camera.running || refBusy) return; activeSelection = [...chosenMemes]; activeReferences = structuredClone(effectiveReferences(references, defaultSet)); smoother.clear(); game.start(performance.now()); };
 $('#next').onclick = () => { if ($('#round-reveal').open) return; reveal.hide(); smoother.clear(); game.next(performance.now()); if (game.phase === 'complete') { render(performance.now()); $('#summary').scrollIntoView({ behavior: 'smooth', block: 'center' }); } };
 $('#retry').onclick = () => { if ($('#round-reveal').open) return; reveal.hide(); smoother.clear(); game.retry(performance.now()); };
+$('#skip').onclick = () => {
+  if (!game.canSkip || $('#round-reveal').open) return;
+  reveal.hide(); smoother.clear(); game.skip(performance.now()); render(performance.now());
+  if (game.phase === 'switch') $('#next').focus();
+  if (game.phase === 'complete') { $('#summary').scrollIntoView({ behavior: 'smooth', block: 'center' }); $('#new-family').focus({ preventScroll: true }); }
+};
 $('#reset').onclick = reset; $('#new-family').onclick = () => { reset(); window.scrollTo({ top: 0 }); };
 $('#reveal-reset').onclick = reset;
 function openMemeLibrary() {
