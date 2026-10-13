@@ -1,10 +1,10 @@
 # Meme Mirror (a quick pet project) [STILL IN DRAFT MODE]
 
-A local browser game for the school PTM on **14 October 2026**. Child and parent copy the same three faces, hold each expression, then see a cheerful score comparison. A temporary picture celebrates each completed hold. No accounts, names, cloud inference, API keys, saved participant photos, or video recordings.
+A local browser game for the school PTM on **14 October 2026**. Child and parent copy the same three faces, hold each expression, then see a cheerful score comparison. A temporary instant replay celebrates each completed hold. No accounts, names, cloud inference, API keys, or saved participant photos/videos.
 
 ## First-time setup (internet needed once)
 
-Printable PTM documents are ready in `output/pdf/`: [Setup and operator guide](output/pdf/Meme-Mirror-Setup-and-Operator-Guide.pdf) (6 A4 pages) and [Visitor poster](output/pdf/Meme-Mirror-PTM-Visitor-Poster-A3.pdf) (one A3 portrait page). Print the poster at A3 actual size, or choose A4 with Fit to printable area. Both describe the current one-second hold. The optional ReportLab authoring script is `scripts/build-ptm-docs.py`; it is not needed to run the game.
+Printable PTM documents are ready in `output/pdf/`: [Setup and operator guide](output/pdf/Meme-Mirror-Setup-and-Operator-Guide.pdf) (6 A4 pages) and [Visitor poster](output/pdf/Meme-Mirror-PTM-Visitor-Poster-A3.pdf) (one A3 portrait page). Print the poster at A3 actual size, or choose A4 with Fit to printable area. These PDFs predate the 13 October balanced-match update; use the current matching and retry rules below when operating the game. The optional ReportLab authoring script is `scripts/build-ptm-docs.py`; it is not needed to run the game.
 
 Install **Node.js 22 or newer** and **Google Chrome**. In PowerShell, open this project folder and run:
 
@@ -25,10 +25,16 @@ No build step is needed. The application is plain HTML, CSS and JavaScript, serv
 2. Open **http://127.0.0.1:4173** in Chrome if it does not open automatically.
 3. Click **Enable camera** and allow access. A built-in camera is the default.
 4. Use **Fullscreen** or Chrome's **F11** key. Press F11/Escape to leave fullscreen.
-5. Click **Start playing**. Each completed hold reveals your steady face beside the reference for **2.5 seconds**, with **Expression match** shown as a percentage below your picture. Then **Next face** becomes available. The child plays three rounds, followed by the parent using the same frozen references.
-6. Use **Retry round** for another take, **Next** to accept the result, and **Reset family** / **Next family** to clear session scores. Reset keeps the webcam ready for the next family.
+5. Click **Start playing**. Each completed hold replays the final moments of your imitation beside the reference for **2.5 seconds**, with **Expression match** shown as a percentage below your replay. Then **Next face** becomes available. The child plays three rounds, followed by the parent using the same frozen references.
+6. Use **Retry round** for another take, **Skip meme (0 points)** during practice, holding or after a failed attempt to move on, **Next** to accept a successful result, and **Reset family** / **Next family** to clear session scores. Reset keeps the webcam ready for the next family.
 
-The reveal uses the exact inferred frame that completes the hold, mirrored to match the preview. The final score still averages the full hold. The picture exists only in a browser canvas: it is never encoded, downloaded, stored or uploaded. Its pixels are cleared after the reveal, on Reset, or when the page is hidden/closed. A reset button is available during the reveal. If a frame cannot be displayed, the round result and Next/Retry remain usable.
+Sound effects start after a camera/play button click: a cheerful chime for a successful match and a **0.9-second drumroll** before the family scores. Use the speaker button in the header or replay to mute; the choice is remembered in this browser. If sound is muted or unavailable when the family finishes, the scores appear immediately. Reset, operator settings and leaving the page stop any playing sound. Effects are generated locally, need no audio downloads and do not use the microphone.
+
+A brief confetti burst celebrates each successful replay. It clears automatically, does not block controls, and is disabled when the device requests reduced motion. Skipping or failing a meme does not trigger it.
+
+During practice and holding, the app keeps a rolling **2.5-second replay buffer** of valid, single-face inferred frames, mirrored to match the preview. It retains at most **32 frames at up to 640 × 480** (about 38 MiB of raw pixels at the maximum). Frames stay in memory: they are never encoded into a video, downloaded, persisted or uploaded, and no audio is captured. The replay ends on the successful expression; its score still comes from the qualifying hold samples.
+
+The buffer clears on tracking loss, pause, failure, skip, retry, reset and page exit; the frozen replay clears after its 2.5-second reveal or when dismissed. Confetti still accompanies success. With a shorter available sequence, the final frame stays visible for the remaining time. Reduced-motion settings show only the finishing frame. If no replay is available, the scored result and Next/Retry remain usable.
 
 The launcher checks the local assets, binds only to `127.0.0.1`, starts a hidden local server, and prefers installed Chrome. It reuses an existing Meme Mirror server from this exact folder. If Chrome is absent, it opens the default browser and reports that Chrome is the target. Another app or another project copy on port 4173 causes an actionable error.
 
@@ -104,21 +110,24 @@ For active feature `i`, target `t_i`, measured value `x_i`, configured weight `w
 
 ```text
 active = relevant features with target >= 0.08 and weight > 0
-E = weighted_mean(clamp(abs(x_i - t_i) / τ, 0, 1))
+D_i = max(0, abs(x_i - t_i) - (0.04 + 0.15 * t_i))
+E = weighted_mean(clamp(D_i * (x_i > t_i ? 0.4 : 1) / τ, 0, 1))
 A = weighted_mean(clamp(x_i / t_i, 0, 1))
 P = sum(conflict_weight_j * clamp(x_j - target_j - 0.12, 0, 1))
 match = 100 * clamp((1 - E) * A - P, 0, 1)
 ```
 
-Only expression-specific active movements earn points. Matching zeros in dozens of unrelated blendshapes earns nothing. `A` penalises absent target movement, and `P` penalises conflicting movements above the reference's own baseline plus a small deadband. Exact target movements score 100; a neutral face scores 0 for the presets. Low scores can still complete a round: holding steady is enough; no minimum score gate excludes participants.
+Only expression-specific active movements earn points. Matching zeros in dozens of unrelated blendshapes earns nothing. `A` penalises absent target movement, and `P` penalises conflicting movements above the reference's own baseline plus a small deadband. Exact target movements score 100; a neutral face scores 0 for the presets. A small intensity deadband and reduced over-target penalty allow natural variation and stronger versions of the same expression. Missing a defining movement or showing a strong conflicting movement caps the score at 44, below the hold threshold. Surprise needs jaw movement plus brows or wide eyes; laughter needs a smile plus squint or jaw movement. The other expressions require their primary movement. These checks use active reference features, so custom photographs retain their own targets.
 
-Features are exponentially smoothed using a **180 ms** time constant. Each round has **3 seconds preparation**, **4 seconds experimentation**, then a comfortable **1-second tracked hold** with at least **3 fresh samples**. Changes in match score do not restart or lengthen the hold, and no minimum match score is required—even a zero-score tracked attempt completes. The final score is the rounded arithmetic mean of all smoothed scores during that short continuous hold. **100% held measures elapsed hold time, not expression accuracy.** This avoids making visitors struggle to maintain an exact expression while keeping the match score honest.
+Features are exponentially smoothed using a **180 ms** time constant. Each round has **3 seconds preparation**, **4 seconds experimentation**, then up to **10 seconds to find and hold a recognizable match**. A hold starts at **55/100** and needs **1 second** of qualifying tracked time with at least **3 fresh samples**. Once started, scores down to **45** maintain progress; dips below that pause progress for up to **250 ms** before clearing it. Dips add neither time nor points, and a round cannot finish on a low-scoring frame. Both the final frame and the mean of the latest second of qualifying hold samples must reach **55**. Face loss, multiple faces and stale tracking clear the hold immediately.
 
-The hold phase has a 2.5-second processing deadline; insufficient camera updates prompt a fresh-view retry. Face loss/multiple faces still clear the hold buffer. The short duration and sample count are adjustable in `TIMING` in `public/game.js`.
+**100% held means the qualifying hold is complete**, separate from the expression-match score. Neutral or unrelated faces do not automatically complete a round. Unsuccessful attempts get expression-specific guidance, Retry and Skip meme. Skipping records **0 points**, marks the round **skipped** in the round list and final summary, and advances without a success photo. It also works during practice or holding, so there is no need to wait for the timeout. The third skipped meme moves to the parent handover or final results as appropriate; the threshold never drops with time. These are provisional game thresholds, not measured human accuracy. Automated fixtures accept 70–130% target-intensity variations for every preset and the bundled grin; live rehearsal across different people is still needed.
+
+The hold window ends after 10 seconds of tracked play without a qualifying match and offers Retry. The hold duration, deadline, dip allowance and sample count are adjustable in `TIMING` in `public/game.js`; match thresholds are in `MATCH_RULES` in `public/scoring.js`.
 
 No-face, multi-face, malformed measurements, hidden tabs, and results older than **500 ms** clear the live score and hold buffer. Tracking loss pauses the attempt and eventually requests Retry after 15 seconds. Background tabs and the operator dialog pause round timers. Inference accepts up to two faces for rejection purposes, but scores only one; application smoothing replaces MediaPipe's one-face-only built-in smoothing.
 
-Each player totals three scores, **out of 300**. Active time is about 48 seconds for six successful rounds, plus 15 seconds of photo reveals, instructions, results and handover: roughly **75–100 seconds per family** is the intended pace, still requiring a timed rehearsal.
+Each player totals three scores, **out of 300**. Active time is about 48 seconds for six successful rounds, plus 15 seconds of replays, instructions, results and handover: roughly **75–100 seconds per family** is the intended pace, still requiring a timed rehearsal.
 
 ### Tune after testing
 
@@ -157,7 +166,8 @@ See **TEST-RESULTS.md** for executed checks and **EXHIBITION-CHECKLIST.md** for 
 - `public/vision-worker.js`, `camera.js`: local model, fallback, single-frame scheduling and camera errors.
 - `public/scoring.js`, `game.js`: tunable scoring and independent round state machine.
 - `public/app.js`, `references.js`: visitor/operator interface and operator reference persistence.
-- `public/reveal.js`: temporary mirrored hold-completion picture and its 2.5-second lifetime.
+- `public/sounds.js`: local success chime, family drumroll and remembered mute control.
+- `public/replay.js`, `reveal.js`: temporary mirrored replay, confetti and their cleanup.
 - `scripts/setup.mjs`, `check-assets.mjs`: local dependency/model preparation and checksums.
 - `scripts/server.mjs`, `launch.ps1`, `stop.ps1`: loopback-only serving and Windows lifecycle.
 - `tests/`: scoring/state tests, browser tests and a Google sample portrait used only in tests.

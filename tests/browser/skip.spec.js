@@ -30,6 +30,7 @@ test('a failed meme can be skipped, both players can continue, and skipped score
     await page.locator('#skip').click();await expect(page.locator('#round-reveal')).toBeHidden();
     if(round===2){await expect(page.locator('#phase-label')).toHaveText('PASS THE SPOTLIGHT');await expect(page.locator('#skip')).toBeHidden();await page.locator('#next').click();}
   }
+  await page.clock.runFor(1000);
   await expect(page.locator('#summary')).toBeVisible();await expect(page.locator('#skip')).toBeHidden();
   await expect(page.locator('#child-total')).toHaveText('0');await expect(page.locator('#parent-total')).toHaveText('0');
   expect((await page.locator('#round-summary').textContent()).match(/skipped \(0\)/g)).toHaveLength(6);

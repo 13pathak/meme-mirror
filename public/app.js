@@ -4,10 +4,23 @@ import { VisionCamera } from './camera.js';
 import { MODEL, readReferences, saveReferences, preparePhoto, validatePack } from './references.js';
 import { RoundReveal } from './reveal.js';
 import { ReplayBuffer } from './replay.js';
+import { SoundEffects, FINALE_MS } from './sounds.js';
 import { effectiveReferences } from './builtin-references.js';
 import { DEFAULT_MEMES, MEME_ICONS, readSelection, saveSelection, selectedProfiles } from './meme-library.js';
 const $ = selector => document.querySelector(selector);
 const game = new Game(), smoother = new Smoother(), replay = new ReplayBuffer();
+const sounds = new SoundEffects();
+let finalePending = false, finaleTimer;
+function updateSoundButtons() {
+  for (const button of document.querySelectorAll('[data-sound-toggle]')) {
+    button.innerHTML = sounds.enabled ? '🔊 <span>Sound on</span>' : '🔇 <span>Sound off</span>';
+    button.setAttribute('aria-label', sounds.enabled ? 'Mute sound effects' : 'Enable sound effects');
+    button.setAttribute('aria-pressed', String(sounds.enabled));
+    button.title = sounds.enabled ? 'Mute sound effects' : 'Enable sound effects';
+  }
+}
+for (const button of document.querySelectorAll('[data-sound-toggle]')) button.onclick = () => { sounds.toggle(); updateSoundButtons(); };
+updateSoundButtons();
 const reveal = new RoundReveal($('#round-reveal'), () => {
   if (game.phase === 'result') {
     $('#next').disabled = false;
@@ -42,6 +55,7 @@ const camera = new VisionCamera($('#camera'), result => {
   game.ingest(matchScore(smoothed, expression()), result.captured);
   if (['attempt','hold'].includes(before) && game.live != null) replay.capture(bitmap, result.captured);
   if (before === 'hold' && game.phase === 'result') {
+    sounds.play('success');
     reveal.show(replay.take(), expression(), game.result);
     render(now);
   }
@@ -50,6 +64,7 @@ const camera = new VisionCamera($('#camera'), result => {
 camera.captureFrame = () => ['attempt','hold'].includes(game.phase) && !$('#operator').open;
 
 function reset() {
+  clearTimeout(finaleTimer); finalePending = false; sounds.stop();
   game.reset(); smoother.clear(); activeReferences = null; activeSelection = null; lastRendered = ''; lastExpression = '';
   reveal.hide(); replay.clear();
   document.body.classList.remove('celebrating'); render(performance.now());
@@ -58,6 +73,7 @@ function requireIdle() {
   if (game.phase !== 'idle') throw new Error('Reset the family before changing the setup.');
 }
 async function enableCamera() {
+  sounds.unlock();
   if (starting || refBusy) return;
   starting = true; $('#enable-camera').disabled = true; $('#reconnect').disabled = true;
   try {
@@ -111,7 +127,7 @@ function render(now) {
   const matching = game.live != null && game.live >= (game.samples.length ? MATCH_RULES.sustain : MATCH_RULES.start);
   $('#meter-note').textContent = phase === 'hold' ? `Aim for ${MATCH_RULES.start}+ and hold for one second. Small wobbles are okay.` : 'A playful game score, not an emotion reading.';
   const remaining = Math.max(0, Math.ceil(game.remaining / 1000));
-  const renderKey = `${phase}:${game.player}:${game.round}:${remaining}:${game.live == null}:${matching}`;
+  const renderKey = `${phase}:${game.player}:${game.round}:${remaining}:${game.live == null}:${matching}:${finalePending}`;
   if (renderKey !== lastRendered) {
     lastRendered = renderKey;
     const text = {
@@ -122,11 +138,11 @@ function render(now) {
       result: ['ROUND COMPLETE', `${game.result} / 100 · ${game.result >= 75 ? 'What an expression!' : game.result >= 40 ? 'You brought it to life!' : 'Thanks for giving it a go!'}`, 'Your match score is the average of your short hold.'],
       failed: ['LET’S TRY THAT AGAIN', 'Retry or skip this meme.', `${game.reason || 'Face the camera and retry.'} ${expression().cue}`],
       switch: ['PASS THE SPOTLIGHT', 'Your turn, parent!', 'Same faces. Same challenge. A brand-new performance.'],
-      complete: ['THAT’S A WRAP', 'A round of applause for both of you!', 'Your family’s expression scores are below.'],
+      complete: finalePending ? ['DRUMROLL, PLEASE…', 'Here come the family scores!', 'One family. Two unforgettable performances.'] : ['THAT’S A WRAP', 'A round of applause for both of you!', 'Your family’s expression scores are below.'],
     }[phase];
     $('#phase-label').textContent = text[0]; $('#prompt').textContent = text[1]; $('#subprompt').textContent = text[2];
   }
-  $('#summary').hidden = phase !== 'complete';
+  $('#summary').hidden = phase !== 'complete' || finalePending;
   if (phase === 'complete') {
     document.body.classList.add('celebrating');
     const totals = game.scores.map(scores => scores.reduce((a,b) => a+b, 0));
@@ -148,14 +164,24 @@ function frame(now) {
   render(now); requestAnimationFrame(frame);
 }
 $('#enable-camera').onclick = enableCamera;
-$('#start').onclick = () => { if (!camera.running || refBusy) return; activeSelection = [...chosenMemes]; activeReferences = structuredClone(effectiveReferences(references, defaultSet)); smoother.clear(); game.start(performance.now()); };
-$('#next').onclick = () => { if ($('#round-reveal').open) return; reveal.hide(); replay.clear(); smoother.clear(); game.next(performance.now()); if (game.phase === 'complete') { render(performance.now()); $('#summary').scrollIntoView({ behavior: 'smooth', block: 'center' }); } };
-$('#retry').onclick = () => { if ($('#round-reveal').open) return; reveal.hide(); replay.clear(); smoother.clear(); game.retry(performance.now()); };
+function familyFinale() {
+  finalePending = sounds.play('finale');
+  const showScores = () => {
+    finalePending = false; render(performance.now());
+    if (game.phase === 'complete') { $('#summary').scrollIntoView({ behavior: 'smooth', block: 'center' }); $('#new-family').focus({ preventScroll: true }); }
+  };
+  if (finalePending) { render(performance.now()); finaleTimer = setTimeout(showScores, FINALE_MS); }
+  else showScores();
+}
+$('#start').onclick = () => { if (!camera.running || refBusy) return; sounds.unlock(); activeSelection = [...chosenMemes]; activeReferences = structuredClone(effectiveReferences(references, defaultSet)); smoother.clear(); game.start(performance.now()); };
+$('#next').onclick = () => { if ($('#round-reveal').open) return; sounds.unlock(); reveal.hide(); replay.clear(); smoother.clear(); game.next(performance.now()); if (game.phase === 'complete') familyFinale(); };
+$('#retry').onclick = () => { if ($('#round-reveal').open) return; sounds.unlock(); sounds.stop(); reveal.hide(); replay.clear(); smoother.clear(); game.retry(performance.now()); };
 $('#skip').onclick = () => {
   if (!game.canSkip || $('#round-reveal').open) return;
+  sounds.unlock();
   reveal.hide(); replay.clear(); smoother.clear(); game.skip(performance.now()); render(performance.now());
   if (game.phase === 'switch') $('#next').focus();
-  if (game.phase === 'complete') { $('#summary').scrollIntoView({ behavior: 'smooth', block: 'center' }); $('#new-family').focus({ preventScroll: true }); }
+  if (game.phase === 'complete') familyFinale();
 };
 $('#reset').onclick = reset; $('#new-family').onclick = () => { reset(); window.scrollTo({ top: 0 }); };
 $('#reveal-reset').onclick = reset;
@@ -199,7 +225,7 @@ $('#apply-memes').onclick=()=>{
   catch(e){$('#library-status').textContent=e.message;}
 };
 $('#fullscreen').onclick = async () => { try { if (document.fullscreenElement) await document.exitFullscreen(); else await document.documentElement.requestFullscreen(); } catch { status('Use Chrome’s F11 key for fullscreen.'); } };
-$('#operator-open').onclick = () => { game.invalidate(); smoother.clear(); replay.clear(); $('#operator').showModal(); };
+$('#operator-open').onclick = () => { sounds.stop(); game.invalidate(); smoother.clear(); replay.clear(); $('#operator').showModal(); };
 $('#operator-close').onclick = () => $('#operator').close();
 $('#operator').addEventListener('close', () => { camera.paused = false; game.lastTick = performance.now(); });
 $('#reconnect').onclick = enableCamera;
@@ -255,6 +281,6 @@ $('#import-references').onchange = async event => {
   } catch(e) { $('#reference-status').textContent = e.message; }
   finally { event.target.value = ''; }
 };
-document.addEventListener('visibilitychange', () => { if (document.hidden) reveal.hide(); replay.clear(); game.invalidate(); smoother.clear(); game.lastTick = performance.now(); });
-window.addEventListener('pagehide', () => { reveal.hide(); replay.clear(); camera.dispose(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden) { sounds.stop(); reveal.hide(); } replay.clear(); game.invalidate(); smoother.clear(); game.lastTick = performance.now(); });
+window.addEventListener('pagehide', () => { sounds.stop(); clearTimeout(finaleTimer); finalePending = false; reveal.hide(); replay.clear(); camera.dispose(); });
 requestAnimationFrame(frame);
