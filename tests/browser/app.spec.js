@@ -39,12 +39,7 @@ test('visitor layout, mobile fit, settings and actual local CPU/GPU model', asyn
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy(); expect(errors).toEqual([]);
 });
 
-const mockCamera = `export class VisionCamera {
- constructor(video, onSample, onStatus) {this.video=video;this.onSample=onSample;this.onStatus=onStatus;this.running=false;this.ready=true;this.delegate='TEST';this.count=1;this.timer=setInterval(()=>{if(this.running&&!this.paused)this.onSample({count:this.count,sample:this.count===1?{smile:.8,brow:.5,wide:.4,jaw:.55,pucker:.7,funnel:.25,frown:0,press:0}:null,ms:1,captured:performance.now(),received:performance.now()});},100);window.addEventListener('test-face-count',e=>this.count=e.detail);}
- async start(){this.running=true;this.stream={getVideoTracks:()=>[{getSettings:()=>({deviceId:'test'})}]};return [{deviceId:'test',label:'Simulated camera'}];}
- stop(){this.running=false;this.onSample({count:0,sample:null,captured:performance.now(),received:performance.now()});}
- dispose(){this.stop();} async analyse(){return {count:0,sample:null};}
-}`;
+import { cameraStub as mockCamera } from './camera-stub.js';
 test('simulated camera: six rounds, handover, retry, tracking loss, comparison, reset', async ({ page }) => {
   await page.route('**/camera.js', route => route.fulfill({ contentType: 'text/javascript', body: mockCamera }));
   await page.clock.install(); await page.goto('/'); await page.locator('#enable-camera').click(); await page.locator('#start').click();

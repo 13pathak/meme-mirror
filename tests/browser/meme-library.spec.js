@@ -1,9 +1,5 @@
 import {test,expect} from '@playwright/test';
-const cameraStub=`export class VisionCamera {
- constructor(video,onSample){this.video=video;this.onSample=onSample;this.running=false;this.timer=setInterval(()=>{if(this.running&&!this.paused)this.onSample({count:1,sample:{smile:.8,brow:.5,wide:.4,jaw:.35,pucker:.7,funnel:.25,frown:0,press:.3,wink:.7,blinkBoth:0,squint:.4,browDown:.5},captured:performance.now(),received:performance.now(),ms:1});},100);}
- async start(){this.running=true;this.stream={getVideoTracks:()=>[{getSettings:()=>({deviceId:'test'})}]};return[];}
- stop(){this.running=false;this.onSample({count:0,sample:null,captured:performance.now(),received:performance.now()});}dispose(){this.stop();}
-}`;
+import { cameraStub as cameraStub } from './camera-stub.js';
 test('emoji chooser cancels safely, persists three choices and uses them for both players',async({page})=>{
   const errors=[];page.on('pageerror',error=>errors.push(error.message));
   await page.route('**/camera.js',route=>route.fulfill({contentType:'text/javascript',body:cameraStub}));

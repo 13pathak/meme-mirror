@@ -27,6 +27,8 @@ export const EXPRESSIONS = [
     target: { browDown: .5, press: .3 }, weights: { browDown: .75, press: .25 }, tolerance: .65, conflicts: { smile: .5, brow: .4, jaw: .35 }, color: 'blue' },
 ];
 export const clamp = (v, lo = 0, hi = 1) => Math.max(lo, Math.min(hi, v));
+// These are game thresholds, not a probability or a validated accuracy measure.
+export const MATCH_RULES = { start: 55, sustain: 45, missingMovementCap: 44 };
 export function measurements(categories) {
   if (!Array.isArray(categories) || !categories.length) return null;
   const map = Object.fromEntries(categories.map(c => [c.categoryName, c.score]));
@@ -46,14 +48,30 @@ export function matchScore(sample, expression) {
   let error = 0, activation = 0;
   for (const [key, weight] of active) {
     const target = expression.target[key];
-    error += weight * clamp(Math.abs(sample[key] - target) / expression.tolerance);
+    // Allow a comfortable range around the reference. Stronger versions of the
+    // same movement should not demand the reference person's exact intensity.
+    const difference = sample[key] - target;
+    const distance = Math.max(0, Math.abs(difference) - (.04 + .15 * target));
+    error += weight * clamp(distance * (difference > 0 ? .4 : 1) / expression.tolerance);
     activation += weight * clamp(sample[key] / target);
   }
-  let penalty = 0;
+  let penalty = 0, strongConflict = false;
   for (const [key, weight] of Object.entries(expression.conflicts)) {
-    penalty += weight * clamp(sample[key] - (expression.target[key] || 0) - .12);
+    const excess = clamp(sample[key] - (expression.target[key] || 0) - .12);
+    penalty += weight * excess;
+    if (weight > 0 && excess >= .6) strongConflict = true;
   }
-  return 100 * clamp((1 - error / total) * (activation / total) - penalty);
+  // A secondary movement must not compensate for the defining expression.
+  // Surprise needs a mouth and an upper-face cue; laughter needs more than a smile.
+  const primary = [...active].sort((a,b) => b[1] - a[1])[0][0];
+  const groups = expression.id === 'surprise' ? [['jaw'], ['brow','wide']]
+    : expression.id === 'laugh' ? [['smile'], ['squint','jaw']] : [[primary]];
+  const missingMovement = groups.some(group => {
+    const relevant = group.filter(key => active.some(([name]) => name === key));
+    return relevant.length > 0 && !relevant.some(key => sample[key] >= Math.max(.1, expression.target[key] * .4));
+  });
+  const score = 100 * clamp((1 - error / total) * (activation / total) - penalty);
+  return missingMovement || strongConflict ? Math.min(MATCH_RULES.missingMovementCap, score) : score;
 }
 export function validateReference(sample, expression) {
   if (!sample) return 'No usable expression measurements. Choose a clear, front-facing human photo.';

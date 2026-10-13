@@ -1,22 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 // Scoring is simulated; an asymmetric canvas makes exact capture/mirroring observable.
-const cameraStub = `export class VisionCamera {
-  constructor(video,onSample) {
-    this.video=video;this.onSample=onSample;this.running=false;this.count=1;
-    this.frame=document.createElement('canvas');this.frame.width=640;this.frame.height=480;
-    const ctx=this.frame.getContext('2d');ctx.fillStyle='#6ba4d2';ctx.fillRect(0,0,320,480);ctx.fillStyle='#e57386';ctx.fillRect(320,0,320,480);
-    ctx.fillStyle='#ffcf59';ctx.beginPath();ctx.arc(320,220,140,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='#283022';ctx.beginPath();ctx.arc(275,200,15,0,Math.PI*2);ctx.arc(365,200,15,0,Math.PI*2);ctx.fill();
-    ctx.lineWidth=9;ctx.beginPath();ctx.arc(320,245,60,0,Math.PI);ctx.stroke();
-    ctx.font='20px Arial';ctx.fillText('SIMULATED CAMERA FRAME',185,425);
-    this.timer=setInterval(()=>{if(this.running&&!this.paused)this.onSample({count:this.count,sample:this.count===1?{smile:.8,brow:.5,wide:.4,jaw:.55,pucker:.7,funnel:.25,frown:0,press:0}:null,bitmap:this.frame,ms:1,captured:performance.now(),received:performance.now()});},100);
-    window.addEventListener('test-face-count',e=>this.count=e.detail);
-  }
-  async start(){this.running=true;this.stream={getVideoTracks:()=>[{getSettings:()=>({deviceId:'test'})}]};return [{deviceId:'test',label:'Simulated camera'}];}
-  stop(){this.running=false;this.onSample({count:0,sample:null,captured:performance.now(),received:performance.now()});}
-  dispose(){this.stop();}
-}`;
+import { cameraStub as cameraStub } from './camera-stub.js';
 test.beforeEach(async ({ page, context }) => {
   await context.route('**/*', route => new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort('internetdisconnected'));
   await page.route('**/camera.js', route => route.fulfill({ contentType:'text/javascript',body:cameraStub }));
@@ -39,7 +24,7 @@ async function reachReveal(page) {
 test('completed hold reveals mirrored frame and final score for 2.5 seconds, then unlocks next meme', async ({ page }) => {
   await reachReveal(page);
   await expect(page.locator('#round-reveal')).toBeVisible();
-  await expect(page.locator('#reveal-score')).toHaveText('68%');
+  await expect(page.locator('#reveal-score')).toHaveText('100%');
   await expect(page.locator('#next')).toBeDisabled();
   await expect(page.locator('#retry')).toBeDisabled();
   const original=await pixels(page);

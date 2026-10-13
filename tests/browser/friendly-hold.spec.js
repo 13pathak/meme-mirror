@@ -1,28 +1,37 @@
 import {test,expect} from '@playwright/test';
+import { cameraStub } from './camera-stub.js';
 
-test('low, fluctuating samosa matches finish a short hold without progress resets',async({page,context})=>{
+test.beforeEach(async({page,context})=>{
   await context.route('**/*',route=>new URL(route.request().url()).hostname==='127.0.0.1'?route.continue():route.abort('internetdisconnected'));
   await page.addInitScript(()=>localStorage.setItem('meme-mirror-round-memes-v1',JSON.stringify(['pout','smile','surprise'])));
-  await page.route('**/camera.js',route=>route.fulfill({contentType:'text/javascript',body:`export class VisionCamera {
-    constructor(video,onSample){this.video=video;this.onSample=onSample;this.running=false;
-      this.frame=document.createElement('canvas');this.frame.width=640;this.frame.height=480;this.frame.getContext('2d').fillRect(0,0,640,480);
-      this.timer=setInterval(()=>{if(this.running&&!this.paused)this.onSample({count:1,sample:{smile:0,brow:0,wide:0,jaw:0,pucker:Math.floor(performance.now()/200)%2?.45:.02,funnel:.05,frown:0,press:0},bitmap:this.frame,captured:performance.now(),received:performance.now(),ms:1});},100);
-    }
-    async start(){this.running=true;this.stream={getVideoTracks:()=>[{getSettings:()=>({deviceId:'test'})}]};return[];}
-    stop(){this.running=false;this.onSample({count:0,sample:null,captured:performance.now(),received:performance.now()});}dispose(){this.stop();}
-  }`}));
+  await page.route('**/camera.js',route=>route.fulfill({contentType:'text/javascript',body:cameraStub}));
   const start=new Date();await page.clock.install({time:start});await page.goto('/');await page.clock.pauseAt(new Date(start.getTime()+1000));
-  await expect(page.locator('#caption')).toHaveText('“The last samosa is gone.”');
-  await page.locator('#enable-camera').click();const startedAt=await page.evaluate(()=>performance.now());await page.locator('#start').click();
-  await page.clock.runFor(7200);let previous=0;let finished=false;
-  for(let step=0;step<14;step++){
-    const state=await page.evaluate(()=>({revealed:document.querySelector('#round-reveal').open,progress:document.querySelector('#hold-progress').textContent}));
-    if(state.revealed){finished=true;break;}
-    const progress=parseInt(state.progress)||0;expect(progress).toBeGreaterThanOrEqual(previous);previous=progress;
-    await page.clock.runFor(100);
-  }
-  expect(finished).toBeTruthy();
-  expect(await page.evaluate(()=>performance.now())-startedAt).toBeLessThanOrEqual(8500);
-  const score=parseInt(await page.locator('#reveal-score').textContent());expect(score).toBeLessThan(50);
+  await page.locator('#enable-camera').click();
+});
+const sample = (page,values) => page.evaluate(values=>window.dispatchEvent(new CustomEvent('test-sample',{detail:values})),values);
+
+test('neutral and weak pout attempts never get a reveal; a moderate retry succeeds',async({page})=>{
+  await sample(page,{pucker:.1,funnel:.03});
+  await page.locator('#start').click();await page.clock.runFor(8500);
+  await expect(page.locator('#round-reveal')).toBeHidden();
+  await expect(page.locator('#phase-label')).toHaveText('FIND THE EXPRESSION');
+  await expect(page.locator('#hold-progress')).toHaveText('0% held');
+  await expect(page.locator('#subprompt')).toContainText('Push your lips forward');
+  await sample(page,{});await page.clock.runFor(9000);
+  await expect(page.locator('#phase-label')).toHaveText('LET’S TRY THAT AGAIN');
+  await expect(page.locator('#next')).toBeHidden();
+  await expect(page.locator('#round-reveal')).toBeHidden();
+  await sample(page,{pucker:.49,funnel:.175});
+  await page.locator('#retry').click();await page.clock.runFor(8300);
+  await expect(page.locator('#round-reveal')).toBeVisible();
+  const score=parseInt(await page.locator('#reveal-score').textContent());
+  expect(score).toBeGreaterThanOrEqual(55);expect(score).toBeLessThan(80);
+});
+
+test('a wrong expression can be corrected during the same hold window',async({page})=>{
+  await sample(page,{smile:.8});await page.locator('#start').click();await page.clock.runFor(8300);
+  await expect(page.locator('#round-reveal')).toBeHidden();await expect(page.locator('#hold-progress')).toHaveText('0% held');
+  await sample(page,{pucker:.55,funnel:.2});await page.clock.runFor(2100);
+  await expect(page.locator('#round-reveal')).toBeVisible();
   await expect(page.locator('#round-reveal .eyebrow')).toContainText('100% HELD');
 });
