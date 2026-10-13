@@ -16,6 +16,7 @@ export class VisionCamera {
     },100);
     window.addEventListener('test-face-count',e=>this.count=e.detail);
     window.addEventListener('test-sample',e=>this.override=e.detail);
+    window.addEventListener('test-frame-color',e=>{ctx.fillStyle=e.detail;ctx.fillRect(320,0,320,480);});
   }
   async start(){this.running=true;this.stream={getVideoTracks:()=>[{getSettings:()=>({deviceId:'test'})}]};return[{deviceId:'test',label:'Simulated camera'}];}
   stop(){this.running=false;this.onSample({count:0,sample:null,captured:performance.now(),received:performance.now()});}

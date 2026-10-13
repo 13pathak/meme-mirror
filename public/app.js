@@ -3,10 +3,11 @@ import { Game, TIMING } from './game.js';
 import { VisionCamera } from './camera.js';
 import { MODEL, readReferences, saveReferences, preparePhoto, validatePack } from './references.js';
 import { RoundReveal } from './reveal.js';
+import { ReplayBuffer } from './replay.js';
 import { effectiveReferences } from './builtin-references.js';
 import { DEFAULT_MEMES, MEME_ICONS, readSelection, saveSelection, selectedProfiles } from './meme-library.js';
 const $ = selector => document.querySelector(selector);
-const game = new Game(), smoother = new Smoother();
+const game = new Game(), smoother = new Smoother(), replay = new ReplayBuffer();
 const reveal = new RoundReveal($('#round-reveal'), () => {
   if (game.phase === 'result') {
     $('#next').disabled = false;
@@ -14,7 +15,7 @@ const reveal = new RoundReveal($('#round-reveal'), () => {
     $('#next').focus({ preventScroll: true });
   }
 });
-let references = readReferences(), activeReferences, tracking = 'Your steady face flashes briefly. Nothing is saved.', starting = false;
+let references = readReferences(), activeReferences, tracking = 'Your instant replay stays here briefly. Nothing is saved.', starting = false;
 let defaultSet = 'checked';
 try { if (localStorage.getItem('meme-mirror-default-set-v1') === 'demo') defaultSet = 'demo'; } catch {}
 $('#reference-set').value = defaultSet;
@@ -30,25 +31,27 @@ const camera = new VisionCamera($('#camera'), result => {
   recent = recent.filter(r => now - r.received < 3000);
   if (result.ms != null) recent.push(readings);
   if (result.count !== 1 || !result.sample || now - result.captured > TIMING.stale) {
-    smoother.clear(); game.ingest(null, now);
+    smoother.clear(); replay.clear(); game.ingest(null, now);
     if (camera.running) status(result.count > 1 ? 'One face at a time! Everyone else, step aside.' : result.count === 1 ? 'Tracking is catching up. Stay facing the camera.' : 'Step into view and face the camera.');
     return;
   }
-  if (document.hidden || $('#operator').open) { smoother.clear(); game.invalidate(); return; }
+  if (document.hidden || $('#operator').open) { smoother.clear(); replay.clear(); game.invalidate(); return; }
   const smoothed = smoother.update(result.sample, result.captured);
   const before = game.phase;
+  if (result.captured - game.lastSample > TIMING.stale) replay.clear();
   game.ingest(matchScore(smoothed, expression()), result.captured);
+  if (['attempt','hold'].includes(before) && game.live != null) replay.capture(bitmap, result.captured);
   if (before === 'hold' && game.phase === 'result') {
-    reveal.show(bitmap, expression(), game.result);
+    reveal.show(replay.take(), expression(), game.result);
     render(now);
   }
   status('One face found. You’re in the spotlight!');
 }, status);
-camera.captureFrame = () => game.phase === 'hold' && !$('#operator').open;
+camera.captureFrame = () => ['attempt','hold'].includes(game.phase) && !$('#operator').open;
 
 function reset() {
   game.reset(); smoother.clear(); activeReferences = null; activeSelection = null; lastRendered = ''; lastExpression = '';
-  reveal.hide();
+  reveal.hide(); replay.clear();
   document.body.classList.remove('celebrating'); render(performance.now());
 }
 function requireIdle() {
@@ -138,14 +141,19 @@ function render(now) {
     $('#diagnostics').textContent = `Delegate: ${camera.delegate || '—'} | Faces: ${lastResult.count}\nObserved inference rate (3 s): ${hz.toFixed(1)} Hz | Mean inference: ${ms.toFixed(1)} ms\nTarget: 12 Hz · camera request: 640 × 480\nActual camera: ${camera.video.videoWidth} × ${camera.video.videoHeight}\n${Object.entries(lastResult.sample || {}).map(([k,v]) => `${k}: ${v.toFixed(3)}`).join('  ')}\nGame phase: ${phase}`;
   }
 }
-function frame(now) { if (!document.hidden && !$('#operator').open) game.tick(now); else { game.lastTick = now; game.invalidate(); smoother.clear(); } render(now); requestAnimationFrame(frame); }
+function frame(now) {
+  if (!document.hidden && !$('#operator').open) game.tick(now);
+  else { game.lastTick = now; game.invalidate(); smoother.clear(); replay.clear(); }
+  if (!['attempt','hold'].includes(game.phase) || game.live == null) replay.clear();
+  render(now); requestAnimationFrame(frame);
+}
 $('#enable-camera').onclick = enableCamera;
 $('#start').onclick = () => { if (!camera.running || refBusy) return; activeSelection = [...chosenMemes]; activeReferences = structuredClone(effectiveReferences(references, defaultSet)); smoother.clear(); game.start(performance.now()); };
-$('#next').onclick = () => { if ($('#round-reveal').open) return; reveal.hide(); smoother.clear(); game.next(performance.now()); if (game.phase === 'complete') { render(performance.now()); $('#summary').scrollIntoView({ behavior: 'smooth', block: 'center' }); } };
-$('#retry').onclick = () => { if ($('#round-reveal').open) return; reveal.hide(); smoother.clear(); game.retry(performance.now()); };
+$('#next').onclick = () => { if ($('#round-reveal').open) return; reveal.hide(); replay.clear(); smoother.clear(); game.next(performance.now()); if (game.phase === 'complete') { render(performance.now()); $('#summary').scrollIntoView({ behavior: 'smooth', block: 'center' }); } };
+$('#retry').onclick = () => { if ($('#round-reveal').open) return; reveal.hide(); replay.clear(); smoother.clear(); game.retry(performance.now()); };
 $('#skip').onclick = () => {
   if (!game.canSkip || $('#round-reveal').open) return;
-  reveal.hide(); smoother.clear(); game.skip(performance.now()); render(performance.now());
+  reveal.hide(); replay.clear(); smoother.clear(); game.skip(performance.now()); render(performance.now());
   if (game.phase === 'switch') $('#next').focus();
   if (game.phase === 'complete') { $('#summary').scrollIntoView({ behavior: 'smooth', block: 'center' }); $('#new-family').focus({ preventScroll: true }); }
 };
@@ -191,7 +199,7 @@ $('#apply-memes').onclick=()=>{
   catch(e){$('#library-status').textContent=e.message;}
 };
 $('#fullscreen').onclick = async () => { try { if (document.fullscreenElement) await document.exitFullscreen(); else await document.documentElement.requestFullscreen(); } catch { status('Use Chrome’s F11 key for fullscreen.'); } };
-$('#operator-open').onclick = () => { game.invalidate(); smoother.clear(); $('#operator').showModal(); };
+$('#operator-open').onclick = () => { game.invalidate(); smoother.clear(); replay.clear(); $('#operator').showModal(); };
 $('#operator-close').onclick = () => $('#operator').close();
 $('#operator').addEventListener('close', () => { camera.paused = false; game.lastTick = performance.now(); });
 $('#reconnect').onclick = enableCamera;
@@ -247,6 +255,6 @@ $('#import-references').onchange = async event => {
   } catch(e) { $('#reference-status').textContent = e.message; }
   finally { event.target.value = ''; }
 };
-document.addEventListener('visibilitychange', () => { if (document.hidden) reveal.hide(); game.invalidate(); smoother.clear(); game.lastTick = performance.now(); });
-window.addEventListener('pagehide', () => { reveal.hide(); camera.dispose(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden) reveal.hide(); replay.clear(); game.invalidate(); smoother.clear(); game.lastTick = performance.now(); });
+window.addEventListener('pagehide', () => { reveal.hide(); replay.clear(); camera.dispose(); });
 requestAnimationFrame(frame);
