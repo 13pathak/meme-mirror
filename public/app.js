@@ -202,7 +202,7 @@ function openMemeLibrary() {
 $('#choose-memes').onclick = () => {openMemeLibrary();$('#apply-memes').disabled=false;};
 $('#library-close').onclick = () => $('#meme-library').close();
 for (const item of EXPRESSIONS) {
-  const tile = document.createElement('button'); tile.type='button';tile.className=`meme-tile ${item.color}`;tile.dataset.meme=item.id;
+  const tile = document.createElement('button'); tile.type='button';tile.className=`meme-tile ${item.color}`;tile.dataset.meme=item.id;tile.tabIndex=0;
   const image=document.createElement('img');image.alt=`${MEME_ICONS[item.id]} ${item.name}`;
   const badge=document.createElement('span');badge.className='meme-round';
   const name=document.createElement('strong');name.textContent=`${MEME_ICONS[item.id]} ${item.name}`;
@@ -220,6 +220,29 @@ for (const item of EXPRESSIONS) {
   };
   $('#meme-options').append(tile);
 }
+// Keyboard navigation for meme library
+$('#meme-library').addEventListener('keydown', (e) => {
+  const tiles = Array.from($('#meme-options').children);
+  const currentIndex = tiles.indexOf(document.activeElement);
+  if (currentIndex === -1) return;
+  let nextIndex = currentIndex;
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+    nextIndex = (currentIndex + 1) % tiles.length;
+    e.preventDefault();
+  } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+    nextIndex = (currentIndex - 1 + tiles.length) % tiles.length;
+    e.preventDefault();
+  } else if (e.key === 'Home') {
+    nextIndex = 0;
+    e.preventDefault();
+  } else if (e.key === 'End') {
+    nextIndex = tiles.length - 1;
+    e.preventDefault();
+  }
+  if (nextIndex !== currentIndex) {
+    tiles[nextIndex].focus();
+  }
+});
 $('#apply-memes').onclick=()=>{
   try {requireIdle();saveSelection(draftMemes);chosenMemes=[...draftMemes];lastExpression='';$('#meme-library').close();render(performance.now());}
   catch(e){$('#library-status').textContent=e.message;}
