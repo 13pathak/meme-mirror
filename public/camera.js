@@ -1,6 +1,12 @@
 import { measurements } from './scoring.js';
 export function cameraMessage(error) {
-  return ({ NotAllowedError: 'Camera permission is off. Allow camera access in Chrome’s address bar, then retry.', NotFoundError: 'No camera found. Connect a webcam, then retry.', NotReadableError: 'Camera is busy. Close other camera apps, then retry.', OverconstrainedError: 'That camera is unavailable. Choose another camera and retry.' })[error.name] || 'Could not start the camera. Reconnect it and retry.';
+  const origin = window.location.origin;
+  return ({
+    NotAllowedError: `Camera permission is off. Allow camera access in Chrome's address bar (site settings) or at chrome://settings/content/siteDetails?site=${origin}, then retry.`,
+    NotFoundError: 'No camera found. Connect a webcam, then retry.',
+    NotReadableError: 'Camera is busy. Close other camera apps, then retry.',
+    OverconstrainedError: 'That camera is unavailable. Choose another camera and retry.'
+  })[error.name] || 'Could not start the camera. Reconnect it and retry.';
 }
 export class VisionCamera {
   constructor(video, onSample, onStatus) {
