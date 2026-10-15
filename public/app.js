@@ -270,8 +270,13 @@ $('#restore-demo').onclick = () => {
   try { requireIdle(); if (refBusy) throw new Error('Wait for photo analysis to finish.'); const next = { ...references, [EXPRESSIONS[Number($('#reference-slot').value)].id]: { demo: true } }; saveReferences(next); references = next; lastExpression = ''; $('#reference-status').textContent = 'Illustrated demo and preset target restored for this slot.'; } catch (e) { $('#reference-status').textContent = e.message; }
 };
 $('#export-references').onclick = () => {
-  const blob = new Blob([JSON.stringify(references, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = 'meme-mirror-references.json'; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+  try {
+    const json = JSON.stringify(references, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = 'meme-mirror-references.json'; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } catch (error) {
+    $('#reference-status').textContent = error.name === 'QuotaExceededError' ? 'Chrome storage is full. Remove a saved reference or use a smaller photo.' : error.message;
+  }
 };
 $('#import-references').onchange = async event => {
   try {
