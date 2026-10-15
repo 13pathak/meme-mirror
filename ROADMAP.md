@@ -11,12 +11,12 @@ This roadmap tracks prioritized improvements for the Meme Mirror project. Items 
 - **Action**: Delete the two PDF files from the root directory
 - **Completed**: Removed duplicate PDFs from project root
 
-### 2. ~~Add localStorage quota exceeded handling for reference pack export~~ ✅ COMPLETED
-- **Issue**: If localStorage is nearly full, reference pack export may fail silently or with unclear error
-- **Impact**: Operators may lose custom references without clear warning
+### 2. ~~Add error handling for reference pack export~~ ✅ COMPLETED
+- **Issue**: Synchronous failures while preparing a reference pack download were not shown to the operator
+- **Impact**: Operators may be unable to create a backup without knowing why
 - **Effort**: Low (15 minutes)
-- **Action**: Add proactive storage quota check before export, with clear warning message
-- **Completed**: Added try-catch around export blob creation with clear error message
+- **Action**: Catch errors while serializing references and preparing the download, and show the error message
+- **Completed**: Added try-catch around download preparation. Export uses in-memory references and does not write to localStorage, so full localStorage does not prevent export. This handler cannot detect later download failures reported by the browser.
 
 ## Priority 2: Reliability and Performance
 
@@ -31,8 +31,8 @@ This roadmap tracks prioritized improvements for the Meme Mirror project. Items 
 - **Issue**: After camera permission is denied, user must manually enable in Chrome settings and retry - no clear guidance
 - **Impact**: Friction for operators setting up the game
 - **Effort**: Low (15 minutes)
-- **Action**: Add more specific guidance in error message with link to Chrome's site settings
-- **Completed**: Added direct link to Chrome's site settings in permission error message
+- **Action**: Add specific guidance for opening Chrome's site settings
+- **Completed**: Added the site's Chrome settings URL with explicit instructions to copy it into the address bar, allow Camera, then return and retry
 
 ### 5. Add memory pressure detection for replay buffer
 - **Issue**: On low-memory devices, the 38 MiB replay buffer could cause issues
@@ -54,7 +54,7 @@ This roadmap tracks prioritized improvements for the Meme Mirror project. Items 
 - **Impact**: Poor accessibility for visually impaired users
 - **Effort**: Low (25 minutes)
 - **Action**: Add specific aria-live announcements for key game state transitions
-- **Completed**: Added aria-live announcer for round completion, player handover, and family completion
+- **Completed**: Added aria-live announcer for round completion, player handover, and family completion. Announcements wait until modal dialogs close and update once per game transition.
 
 ### 8. Add visual focus indicator consistency
 - **Issue**: Focus indicators exist but could be more visible across all interactive elements
@@ -91,9 +91,10 @@ This roadmap tracks prioritized improvements for the Meme Mirror project. Items 
   - Deleted duplicate PDF files that were cluttering the project root
   - Authoritative copies remain in output/pdf/
 
-- **Add localStorage quota exceeded handling for reference pack export** (commit a1907fe)
-  - Wrapped export blob creation in try-catch
-  - Displays clear error message when Chrome storage is full
+- **Add error handling for reference pack export** (commit a1907fe)
+  - Wrapped reference serialization and download preparation in try-catch
+  - Displays synchronous export errors; export does not write to localStorage and works when storage is full
+  - Browser-reported failures after download preparation are outside this handler
 
 ### Reliability and Performance
 - **Add WebP support detection with JPEG fallback for reference photos** (commit 0bcc081)
@@ -102,9 +103,9 @@ This roadmap tracks prioritized improvements for the Meme Mirror project. Items 
   - Falls back to JPEG for older browsers
   - Increased reference pack size limit to 2.5 MB
 
-- **Improve camera permission error message with direct settings link** (commit 7149696)
-  - Added direct link to Chrome's site settings for camera permission
-  - Uses window.location.origin to link to the correct origin
+- **Improve camera permission error message with settings guidance** (commit 7149696, clarified after review)
+  - Added Chrome's site settings URL with instructions to copy and paste it into the address bar
+  - Uses window.location.origin for the correct site's settings
   - Better guidance for permission denial recovery
 
 ### Usability and Accessibility
@@ -116,7 +117,8 @@ This roadmap tracks prioritized improvements for the Meme Mirror project. Items 
 
 - **Add aria-live announcements for screen reader accessibility** (commit 8fd8d93)
   - Added screen-reader-only announcer element in game console
-  - Announces round completion with score for screen readers
+  - Announces round completion with score after the replay dialog closes
+  - Defers announcements while modal dialogs are open and avoids repeats from live tracking updates
   - Announces player handover between child and parent turns
   - Announces family completion and score availability
   - Added .sr-only CSS utility class for screen-reader-only content

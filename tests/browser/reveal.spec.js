@@ -25,6 +25,15 @@ test('completed hold reveals mirrored frame and final score for 2.5 seconds, the
   await reachReveal(page);
   await expect(page.locator('#round-reveal')).toBeVisible();
   await expect(page.locator('#reveal-score')).toHaveText('100%');
+  await expect(page.locator('#game-announcer')).toHaveText('');
+  await page.evaluate(() => {
+    window.scoreAnnouncements = [];
+    const announcer = document.querySelector('#game-announcer');
+    new MutationObserver(() => window.scoreAnnouncements.push({
+      text: announcer.textContent,
+      modalOpen: !!document.querySelector('dialog[open]')
+    })).observe(announcer, { childList: true });
+  });
   await expect(page.locator('#next')).toBeDisabled();
   await expect(page.locator('#retry')).toBeDisabled();
   const original=await pixels(page);
@@ -40,10 +49,22 @@ test('completed hold reveals mirrored frame and final score for 2.5 seconds, the
   await page.screenshot({path:'test-results/steady-face-reveal-laptop.png',fullPage:true});
   await page.clock.runFor(2200);await expect(page.locator('#round-reveal')).toBeVisible();expect(await pixels(page)).toEqual(original);
   await page.clock.runFor(400);await expect(page.locator('#round-reveal')).toBeHidden();
+  await expect(page.locator('#game-announcer')).toHaveText('Round complete. Score: 100 out of 100.');
+  const accessibility = await page.context().newCDPSession(page);
+  const tree = await accessibility.send('Accessibility.getFullAXTree');
+  expect(tree.nodes.some(node => !node.ignored && node.name?.value === 'Round complete. Score: 100 out of 100.')).toBeTruthy();
+  await accessibility.detach();
+  // Tracking changes after a result must not announce the same score again.
+  await page.evaluate(() => window.dispatchEvent(new CustomEvent('test-sample', { detail: { smile: 0 } })));
+  await page.clock.runFor(500);
+  expect(await page.evaluate(() => window.scoreAnnouncements)).toEqual([
+    { text: 'Round complete. Score: 100 out of 100.', modalOpen: false }
+  ]);
   expect(await page.locator('#reveal-photo').evaluate(canvas=>[canvas.width,canvas.height])).toEqual([0,0]);
   await expect(page.locator('#next')).toBeEnabled();await page.locator('#next').click();await page.clock.runFor(100);
   await expect(page.locator('#caption')).toHaveText('“The test has a second page.”');
   await expect(page.locator('#countdown')).toBeVisible();
+  await expect(page.locator('#game-announcer')).toHaveText('');
   expect(await page.evaluate(()=>Object.keys(localStorage))).toEqual(['meme-mirror-default-set-v1']);
 });
 
@@ -51,6 +72,7 @@ test('reset clears the picture immediately and failed tracking cannot reveal a f
   await reachReveal(page);
   await page.locator('#reveal-reset').click();await page.clock.runFor(100);
   await expect(page.locator('#round-reveal')).toBeHidden();
+  await expect(page.locator('#game-announcer')).toHaveText('');
   expect(await page.locator('#reveal-photo').evaluate(canvas=>[canvas.width,canvas.height])).toEqual([0,0]);
   await expect(page.locator('#start')).toBeVisible();await page.locator('#start').click();
   await page.evaluate(()=>window.dispatchEvent(new CustomEvent('test-face-count',{detail:2})));

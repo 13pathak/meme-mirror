@@ -61,4 +61,5 @@ test('reduced motion keeps the finishing frame still and a missing replay leaves
   await page.reload();await page.locator('#enable-camera').click();await page.locator('#start').click();await page.clock.runFor(8300);
   await expect(page.locator('#round-reveal')).toBeHidden();await expect(page.locator('#next')).toBeEnabled();
   await expect(page.locator('#phase-label')).toHaveText('ROUND COMPLETE');
+  await expect(page.locator('#game-announcer')).toHaveText('Round complete. Score: 100 out of 100.');
 });
