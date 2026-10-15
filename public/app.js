@@ -141,6 +141,16 @@ function render(now) {
       complete: finalePending ? ['DRUMROLL, PLEASE…', 'Here come the family scores!', 'One family. Two unforgettable performances.'] : ['THAT’S A WRAP', 'A round of applause for both of you!', 'Your family’s expression scores are below.'],
     }[phase];
     $('#phase-label').textContent = text[0]; $('#prompt').textContent = text[1]; $('#subprompt').textContent = text[2];
+    // Announce phase changes for screen readers
+    const announcer = $('#game-announcer');
+    if (announcer) {
+      const announcement = {
+        result: `Round complete. Score: ${game.result} out of 100.`,
+        switch: 'Child\'s turn complete. Parent\'s turn begins.',
+        complete: finalePending ? 'Family complete. Drumroll...' : 'Family complete. Scores are ready.'
+      }[phase];
+      if (announcement) announcer.textContent = announcement;
+    }
   }
   $('#summary').hidden = phase !== 'complete' || finalePending;
   if (phase === 'complete') {
