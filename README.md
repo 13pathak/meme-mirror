@@ -1,4 +1,4 @@
-# Meme Mirror (a quick pet project) [STILL IN DRAFT MODE]
+# Meme Mirror (a quick pet project)
 
 A local browser game for the school PTM on **14 October 2026**. Child and parent copy the same three faces, hold each expression, then see a cheerful score comparison. A temporary instant replay celebrates each completed hold. No accounts, names, cloud inference, API keys, or saved participant photos/videos.
 
