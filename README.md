@@ -1,23 +1,26 @@
-# Meme Mirror (a quick pet project)
+# Meme Mirror
 
-A local browser game for the school PTM on **14 October 2026**. Child and parent copy the same three faces, hold each expression, then see a cheerful score comparison. A temporary instant replay celebrates each completed hold. No accounts, names, cloud inference, API keys, or saved participant photos/videos.
+Meme Mirror is a local browser game for children and parents, originally made for a school parent–teacher meeting. Each player copies the same three facial expressions, holds each one, and gets a score comparison and a short instant replay. Face tracking runs on the device, with no accounts, API keys, cloud inference, or saved participant photos or videos.
 
 ## First-time setup (internet needed once)
 
 Printable PTM documents are ready in `output/pdf/`: [Setup and operator guide](output/pdf/Meme-Mirror-Setup-and-Operator-Guide.pdf) (6 A4 pages) and [Visitor poster](output/pdf/Meme-Mirror-PTM-Visitor-Poster-A3.pdf) (one A3 portrait page). Print the poster at A3 actual size, or choose A4 with Fit to printable area. These PDFs predate the 13 October balanced-match update; use the current matching and retry rules below when operating the game. The optional ReportLab authoring script is `scripts/build-ptm-docs.py`; it is not needed to run the game.
 
-Install **Node.js 22 or newer** and **Google Chrome**. In PowerShell, open this project folder and run:
+Install **Node.js 22 or newer** and **Google Chrome**. Clone the repository with Git, then install and check the local assets in PowerShell:
 
 ```powershell
-cd 'C:\Hotmail\OneDrive\Extensions\Isolates\Meme Mirror'
+git clone https://github.com/13pathak/meme-mirror.git
+cd meme-mirror
 npm.cmd ci
 npm.cmd run setup
 npm.cmd run check:assets
 ```
 
-The supplied checkout already contains prepared model/runtime assets and installed dependencies. Setup is for a fresh copy or recovery. `npm ci` follows `package-lock.json`; it does not upgrade packages. `npm run setup` copies the exact JS/WASM runtime and downloads the version-1 model only if missing. `assets-lock.json` records SHA-256 checksums; model replacement must match the pinned checksum.
+If you downloaded a ZIP instead, extract it, open PowerShell in the extracted project folder, and start with `npm.cmd ci`.
 
-No build step is needed. The application is plain HTML, CSS and JavaScript, served by Node's built-in HTTP server. This keeps startup smaller than a development-tool chain. MediaPipe Tasks Vision **0.10.21** and test-only Playwright **1.56.1** are pinned. A newer MediaPipe release exists; this conservative pin was chosen and tested with the version-1 model instead of using an untested floating `latest` dependency.
+The repository includes the model and runtime assets; Node dependencies are installed by `npm.cmd ci` using `package-lock.json`. `npm.cmd run setup` refreshes the pinned JS/WASM runtime and downloads the version-1 model only if it is missing. `assets-lock.json` records SHA-256 checksums; a replacement model must match the pinned checksum.
+
+No build step is needed. The application is plain HTML, CSS and JavaScript, served by Node's built-in HTTP server. MediaPipe Tasks Vision **0.10.21** and test-only Playwright **1.56.1** are pinned in `package.json`.
 
 ## Normal exhibition startup (internet not needed)
 
@@ -66,7 +69,7 @@ Open the **gear** at the top right. This pauses the round while keeping diagnost
 
 ## Add your human references
 
-The default set keeps the **working human grin (photo 3)**. Following live feedback, **The plot twist has been reverted to its original surprise illustration and preset target**; pout also keeps its original demo. The grin's measured target is in `public/builtin-references.js`. The retired surprise photo remains a historical asset and is not selected by the app. See **REFERENCE-CHECKS.md** for the original image checks and the subsequent live-feedback change.
+The default set uses a human grin photo, a surprise illustration, and a pout illustration. The grin's measured target is in `public/builtin-references.js`; surprise and pout use preset targets. The bundled surprise photo is retained as a historical asset and is not selected by the app. See [Reference checks](REFERENCE-CHECKS.md) for the image checks and selection history.
 
 ### More emoji expression memes
 
@@ -145,7 +148,7 @@ Raise tolerance slightly if normal variation is too harsh. Adjust the strongest 
 
 All runtime JavaScript, SIMD/non-SIMD WASM files, model weights, illustrations and styles live under `public/`. Fonts are installed system fonts, not web downloads. No CDN, cloud API or external asset is requested during play. The server's Content Security Policy restricts network connections to this origin. `npm start` and both launchers do not install anything. Once prepared, even `node_modules` is unnecessary for ordinary startup; keep it for setup and automated tests.
 
-Because this folder is under OneDrive, mark the **entire project “Always keep on this device”**, or copy it to a fully local folder such as `C:\MemeMirror`. Keep `public/`, `scripts/`, `assets-lock.json`, and the launchers together. A new path still uses the same browser origin; export references before moving profiles/machines.
+If you keep the project in OneDrive or another cloud-synced folder, make the **entire project available offline**, or copy it to a local folder. Keep `public/`, `scripts/`, `assets-lock.json`, and the launchers together. Moving the folder does not change the browser origin; export references before changing browser profiles or machines.
 
 **Mandatory laptop rehearsal:** stop the server and close the browser, disconnect Wi-Fi/Ethernet, start using the launcher, reload the app, enable the camera, finish both turns, restart again and verify photos still appear. Do not rely on an already-loaded tab. Reconnect only after confirming the test. Automated tests here blocked all non-loopback browser requests with fresh contexts after a server restart; this is useful offline-dependency coverage, but it does not replace physically disconnecting the exhibition laptop.
 
@@ -158,9 +161,9 @@ npm.cmd run check:assets
 npm.cmd run test:browser
 ```
 
-For a portable Chrome build, set `$env:CHROME_PATH` to its `chrome.exe` before the browser test command. `PW_CHANNEL=msedge` is available for a secondary smoke check. Test-only browser simulations never ship a fake scoring mode in the visitor app.
+For a portable Chrome build, set `$env:CHROME_PATH` to its `chrome.exe` before the browser test command. In PowerShell, set `$env:PW_CHANNEL = 'msedge'` for a secondary smoke check with Microsoft Edge. Test-only browser simulations never ship a fake scoring mode in the visitor app.
 
-See **TEST-RESULTS.md** for executed checks and **EXHIBITION-CHECKLIST.md** for the remaining human/hardware rehearsal. Files:
+See [Test results](TEST-RESULTS.md) for recorded checks and the [Exhibition checklist](EXHIBITION-CHECKLIST.md) for human and hardware rehearsal. Files:
 
 - `public/feasibility.*`: minimal camera/measurement lab.
 - `public/vision-worker.js`, `camera.js`: local model, fallback, single-frame scheduling and camera errors.
@@ -172,6 +175,9 @@ See **TEST-RESULTS.md** for executed checks and **EXHIBITION-CHECKLIST.md** for 
 - `scripts/server.mjs`, `launch.ps1`, `stop.ps1`: loopback-only serving and Windows lifecycle.
 - `tests/`: scoring/state tests, browser tests and a Google sample portrait used only in tests.
 
-### Documentation checked
+### References
 
-Official [Face Landmarker web guide](https://developers.google.com/edge/mediapipe/solutions/vision/face_landmarker/web_js), [package listing](https://www.npmjs.com/package/@mediapipe/tasks-vision), and [version-1 model](https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task), checked 12 October 2026. The guide documents blendshape output, image/video modes, synchronous inference, subject-relative left/right names and smoothing restrictions. See `THIRD-PARTY-NOTICES.md` for asset provenance.
+- [Face Landmarker web guide](https://developers.google.com/edge/mediapipe/solutions/vision/face_landmarker/web_js)
+- [MediaPipe Tasks Vision package](https://www.npmjs.com/package/@mediapipe/tasks-vision)
+- [Pinned version-1 model](https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task)
+- [Third-party notices and asset provenance](THIRD-PARTY-NOTICES.md)
